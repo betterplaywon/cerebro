@@ -165,6 +165,8 @@ object-src 'none'; base-uri 'self'; frame-ancestors 'none';
 
 ## 6. 인증 · 인가
 
+> **적용 시점(정합성)**: MVP(M1)는 **익명 단발 검색**으로 로그인이 없다(PRD §4.2, ARCHITECTURE). 아래 인증·인가 규칙은 계정/개인화가 도입되는 **M2부터** 적용된다. 단, Supabase 사용 시점부터 **RLS·service_role 서버 전용** 원칙은 즉시 적용한다. (ADR-0002 참조)
+
 - **Supabase Auth** 사용(이메일/OAuth). API는 매 요청 JWT를 검증(`auth.getUser()`)하고 만료/서명 확인.
 - **RLS 필수**: 모든 테이블 Row Level Security 활성. anon/authenticated 역할에 최소 권한만.
 - **service_role 키는 서버 전용**(브라우저·로그·클라이언트 절대 금지). 관리 작업은 API 경유.
