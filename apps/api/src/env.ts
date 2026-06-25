@@ -9,6 +9,8 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8787),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  /** 검색 결과 캐시 TTL(ms). 무료 운영 핵심 — 기본 30분 */
+  CACHE_TTL_MS: z.coerce.number().int().positive().default(1000 * 60 * 30),
 });
 
 export const env = EnvSchema.parse(process.env);

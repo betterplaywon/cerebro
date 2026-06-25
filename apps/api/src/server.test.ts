@@ -44,4 +44,13 @@ describe('cerebro api', () => {
     expect(res.statusCode).toBe(400);
     expect(res.json().error.code).toBe('INVALID_REQUEST');
   });
+
+  it('POST /api/search → 동일 검색은 캐시 히트(cached=true)', async () => {
+    const first = await app.inject({ method: 'POST', url: '/api/search', payload: { query: '카카오' } });
+    expect(first.json().cached).toBe(false);
+    const second = await app.inject({ method: 'POST', url: '/api/search', payload: { query: '카카오' } });
+    expect(second.json().cached).toBe(true);
+    // 캐시 히트도 동일 그래프(계약 만족)
+    expect(second.json().graph.subject.query).toBe('카카오');
+  });
 });
