@@ -1,6 +1,8 @@
 # CLAUDE.md — cerebro 작업 지침
 
 > 이 파일은 매 세션 로드되는 **상시 규칙**입니다. 상세·근거는 [`docs/foundation/FOUNDATION-SPEC.md`](./docs/foundation/FOUNDATION-SPEC.md)(SSOT)를 따릅니다.
+>
+> 🟢 **작업 재개 시 먼저 읽기: [`docs/STATUS.md`](./docs/STATUS.md)** — 현재 상태·다음 작업·구글 재검증 절차.
 
 ## 프로젝트 한 줄
 cerebro = 기업·개인(공개정보)의 흩어진 정보를 수집·정제해 **중심-가지 구조 3D 마인드맵**으로 보여주는 웹 서비스. (X-Men 'Cerebro' 영감)
