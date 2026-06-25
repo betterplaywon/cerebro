@@ -11,12 +11,18 @@ import { buildMockGraph } from './graph/mock.js';
 import { createTTLCache } from './lib/cache.js';
 import { collectAll } from './collect/orchestrator.js';
 import { buildGraphFromCollection } from './graph/build.js';
+import type { SourceAdapter } from './sources/types.js';
+
+export interface BuildServerOptions {
+  /** 수집 어댑터 주입(테스트는 fixture 주입으로 무네트워크). 미지정 시 registry 사용. */
+  adapters?: SourceAdapter[];
+}
 
 /**
  * Fastify 앱 구성. 테스트(app.inject)와 실행(index.ts) 양쪽에서 재사용.
  * 캐시는 인스턴스별로 둬 테스트 격리를 보장한다.
  */
-export function buildServer(): FastifyInstance {
+export function buildServer(opts: BuildServerOptions = {}): FastifyInstance {
   const app = Fastify({
     logger: env.NODE_ENV === 'test' ? false : { level: env.NODE_ENV === 'production' ? 'info' : 'debug' },
   });
@@ -47,7 +53,7 @@ export function buildServer(): FastifyInstance {
     const now = new Date().toISOString();
     let graph: GraphSnapshot;
     try {
-      const { items } = await collectAll(query, type, now);
+      const { items } = await collectAll(query, type, now, opts.adapters);
       graph = buildGraphFromCollection(query, type, items, now);
       // 수집 결과가 빈약하면 목업으로 폴백(데모 연속성)
       if (graph.nodes.length <= 1) graph = buildMockGraph(query, type);

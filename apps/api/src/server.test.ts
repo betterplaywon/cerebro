@@ -2,12 +2,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { GraphSnapshotSchema } from '@cerebro/shared';
 import { buildServer } from './server.js';
+import { exampleAdapter } from './sources/example.js';
 
 describe('cerebro api', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
-    app = buildServer();
+    // 테스트는 fixture 어댑터 주입 → 외부 네트워크 없이 결정적
+    app = buildServer({ adapters: [exampleAdapter] });
     await app.ready();
   });
 
