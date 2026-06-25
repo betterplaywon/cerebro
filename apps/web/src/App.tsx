@@ -1,10 +1,14 @@
-import { useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 import type { GraphNode, GraphSnapshot } from '@cerebro/shared';
 import { searchCerebro } from './api/client';
 import { SearchBar } from './components/SearchBar';
 import { CerebroLoader } from './components/CerebroLoader';
-import { MindMapCanvas } from './components/MindMapCanvas';
 import { DetailPanel } from './components/DetailPanel';
+
+// 3D 캔버스(three.js)는 결과가 준비된 뒤에만 필요 → 초기 번들에서 분리(lazy).
+const MindMapCanvas = lazy(() =>
+  import('./components/MindMapCanvas').then((m) => ({ default: m.MindMapCanvas })),
+);
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -47,11 +51,13 @@ export default function App() {
         )}
         {status === 'ready' && graph && (
           <div className="app__graph">
-            <MindMapCanvas
-              graph={graph}
-              selectedId={selected?.id ?? null}
-              onSelect={setSelected}
-            />
+            <Suspense fallback={<CerebroLoader label="3D 그래프 준비 중…" />}>
+              <MindMapCanvas
+                graph={graph}
+                selectedId={selected?.id ?? null}
+                onSelect={setSelected}
+              />
+            </Suspense>
             {selected && (
               <DetailPanel node={selected} graph={graph} onClose={() => setSelected(null)} />
             )}
