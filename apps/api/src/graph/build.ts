@@ -6,7 +6,7 @@ import {
   type Source,
   type SubjectType,
 } from '@cerebro/shared';
-import type { NormalizedItem } from '../collect/normalize.js';
+import { tokenize, type NormalizedItem } from '../collect/normalize.js';
 import { extractTopics } from '../collect/score.js';
 
 /**
@@ -32,7 +32,11 @@ export function buildGraphFromCollection(
   };
 
   const maxTopics = Math.max(0, Math.min(GRAPH_LIMITS.MAX_NODES - 1, 8));
-  const topics = extractTopics(items, maxTopics);
+  // 검색어 자체 토큰은 중심과 중복되므로 토픽에서 제외
+  const queryTokens = new Set(tokenize(query));
+  const topics = extractTopics(items, maxTopics + 4)
+    .filter((t) => !queryTokens.has(t.token))
+    .slice(0, maxTopics);
 
   const topicNodes: GraphNode[] = topics.map((t, i) => ({
     id: `topic-${i}`,
