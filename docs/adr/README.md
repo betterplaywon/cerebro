@@ -7,3 +7,4 @@
 |---|---|---|
 | [0001](./0001-graph-contract-ssot.md) | 그래프 계약은 packages/shared가 SSOT | Accepted |
 | [0002](./0002-auth-deferred-to-m2.md) | 인증은 M2로 연기(MVP 익명) | Accepted |
+| [0003](./0003-google-curated-domains.md) | 구글 소스는 엄선 도메인(무료 전체웹 종료) | Accepted |

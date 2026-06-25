@@ -24,6 +24,7 @@ export interface GoogleDeps {
 /**
  * 구글 Programmable Search(Custom Search JSON API) 어댑터(키 필요).
  * 무료 100회/일 — 캐시로 절약. 키 미설정 시 자동 비활성.
+ * 참고: 2026-01 무료 전체웹 검색 종료 → CSE에 등록한 엄선 도메인(≤50)을 검색한다. (ADR-0003)
  */
 export function createGoogleAdapter(deps: GoogleDeps = {}): SourceAdapter {
   const limiter = createRateLimiter(200);
