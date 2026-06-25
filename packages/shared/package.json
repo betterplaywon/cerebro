@@ -1,0 +1,24 @@
+{
+  "name": "@cerebro/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "cerebro 공용 타입·zod 스키마·상수 (FE↔BE 계약 SSOT)",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  }
+}
