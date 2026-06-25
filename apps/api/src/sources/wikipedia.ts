@@ -1,5 +1,6 @@
 import { safeFetch, SafeFetchError } from '../lib/http.js';
 import { createRateLimiter, withRetry } from '../lib/rate-limit.js';
+import { stripHtml } from '../lib/text.js';
 import type { CollectContext, RawItem, SourceAdapter } from './types.js';
 
 const WIKI_HOST = 'ko.wikipedia.org';
@@ -72,18 +73,4 @@ function isTransient(error: unknown): boolean {
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
-}
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;|&apos;/g, "'")
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#x?[0-9a-f]+;/gi, ' ') // 기타 수치 엔티티 제거(노이즈 방지)
-    .replace(/&[a-z]+;/gi, ' ') // 기타 명명 엔티티 제거
-    .replace(/\s+/g, ' ')
-    .trim();
 }
