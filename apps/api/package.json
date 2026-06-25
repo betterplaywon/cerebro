@@ -1,0 +1,27 @@
+{
+  "name": "@cerebro/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "cerebro 백엔드 — 하이브리드 수집·정제·그래프 빌드 API (Fastify)",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@cerebro/shared": "workspace:*",
+    "@fastify/cors": "^10.0.1",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.1.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  }
+}
