@@ -1,0 +1,24 @@
+# CODEOWNERS — 경로별 1차 책임자.
+# 현재는 단일 메인테이너(@betterplaywon)가 승인. 주석은 담당 "에이전트 역할".
+# (팀 확장 시 실제 GitHub 핸들/팀으로 교체)
+
+*                       @betterplaywon
+
+# Frontend Engineer (+ UI/UX Designer)
+/apps/web/              @betterplaywon
+
+# Backend Engineer
+/apps/api/              @betterplaywon
+
+# Backend + Frontend (계약)
+/packages/shared/       @betterplaywon
+
+# Orchestrator
+/docs/ARCHITECTURE.md   @betterplaywon
+/docs/DATA-MODEL.md     @betterplaywon
+/.github/               @betterplaywon
+/.claude/               @betterplaywon
+
+# Cyber Security
+/docs/SECURITY.md       @betterplaywon
+/.claude/rules/security.md  @betterplaywon
