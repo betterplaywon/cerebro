@@ -1,8 +1,11 @@
 import type { SourceAdapter } from './types.js';
-import { exampleAdapter } from './example.js';
+import { wikipediaAdapter } from './wikipedia.js';
 
-/** 등록된 모든 어댑터. 새 소스는 여기에 추가한다. */
-const ADAPTERS: readonly SourceAdapter[] = [exampleAdapter];
+/**
+ * 등록된 모든 어댑터. 새 소스는 여기에 추가한다.
+ * (example 어댑터는 테스트 fixture 전용 — 프로덕션 레지스트리에 넣지 않는다)
+ */
+const ADAPTERS: readonly SourceAdapter[] = [wikipediaAdapter];
 
 export function getAllAdapters(): readonly SourceAdapter[] {
   return ADAPTERS;
