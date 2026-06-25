@@ -1,0 +1,79 @@
+# ───────────────────────── Secrets & Env (절대 커밋 금지) ─────────────────────────
+.env
+.env.*
+!.env.example
+*.local
+*.key
+*.pem
+*.p12
+*.pfx
+*.cert
+*.crt
+*.keystore
+*.jks
+secrets/
+secret/
+.secrets/
+credentials.json
+serviceAccount*.json
+gha-creds-*.json
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# ───────────────────────── Dependencies ─────────────────────────
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# ───────────────────────── Build output ─────────────────────────
+dist/
+dist-ssr/
+build/
+out/
+.output/
+.vite/
+*.tsbuildinfo
+
+# ───────────────────────── Test / coverage ─────────────────────────
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# ───────────────────────── Caches ─────────────────────────
+.cache/
+.turbo/
+.eslintcache
+.parcel-cache/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ───────────────────────── Editor / OS ─────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.shared.json
+
+# ───────────────────────── Claude Code (local only) ─────────────────────────
+.claude/settings.local.json
+.claude/*.local.json
+
+# ───────────────────────── Misc ─────────────────────────
+*.pid
+*.seed
+tmp/
+temp/
+scratchpad/
