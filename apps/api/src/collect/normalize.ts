@@ -18,7 +18,7 @@ export function tokenize(text: string): string[] {
   return text
     .toLowerCase()
     .split(/[^0-9a-z가-힣]+/i)
-    .filter((t) => t.length >= 2 && !STOPWORDS.has(t));
+    .filter((t) => t.length >= 2 && !STOPWORDS.has(t) && !/^\d+$/.test(t));
 }
 
 const BASE_CONFIDENCE: Partial<Record<SourceType, number>> = {

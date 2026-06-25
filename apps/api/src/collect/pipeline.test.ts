@@ -9,6 +9,10 @@ describe('tokenize', () => {
   it('불용어와 1글자 토큰을 제거한다', () => {
     expect(tokenize('토스 제품 소개 the a')).toEqual(['토스', '제품']);
   });
+
+  it('순수 숫자 토큰을 제거한다(년도 등은 유지)', () => {
+    expect(tokenize('삼성 039 2020년')).toEqual(['삼성', '2020년']);
+  });
 });
 
 describe('dedupeByUrl', () => {
