@@ -45,13 +45,15 @@ GOOGLE_CSE_ID=
 6. `.env`의 `GOOGLE_API_KEY=`에 입력. (결제 없이 100회/일 무료)
 
 ### 2-2. 검색엔진 ID (`GOOGLE_CSE_ID` = cx)
-1. https://programmablesearchengine.google.com/controlpanel/all → **추가(Add)**.
-2. 이름 `cerebro` → **"전체 웹 검색(Search the entire web)" 토글 켜기** → CAPTCHA → **만들기**.
-3. 생성 후 **맞춤설정/개요**에서 **검색엔진 ID(Search engine ID)** 복사 → `.env`의 `GOOGLE_CSE_ID=`에 입력.
+> ⚠️ **무료 "전체 웹 검색"은 2026-01-20부로 종료**됨(신규 엔진은 최대 50개 도메인). cerebro는 구글을 **엄선 도메인 보조 소스**로 사용한다. ([ADR-0003](../adr/0003-google-curated-domains.md))
+
+1. https://programmablesearchengine.google.com/controlpanel/all → **추가(Add)** → 이름 `cerebro`.
+2. 생성 시 사이트 1개 입력 요구 → 아무거나 넣고 만든 뒤, **설정(Setup) → 검색할 사이트(Sites to search)** 에서 **고가치 한국 도메인(≤50)** 을 `*.도메인` 형식으로 등록(예: `*.namu.wiki`, `*.yna.co.kr`, `*.rocketpunch.com`, `terms.naver.com`, `play.google.com`). 네이버가 약한 영역 위주.
+3. **맞춤설정/개요** 또는 임베드 스니펫의 **`cx=` 값** = **검색엔진 ID** → `.env`의 `GOOGLE_CSE_ID=`에 입력.
 
 - ⚠️ JSON API는 **API 키 + 검색엔진 ID 둘 다** 필요(위젯 ID만으론 불가).
 - 엔드포인트: `https://www.googleapis.com/customsearch/v1?key=<API_KEY>&cx=<CSE_ID>&q=<쿼리>&hl=ko`.
-- 일 100회 무료 — 캐시(30분)로 절약, 필요 시 네이버 우선.
+- 일 100회 무료 — 캐시(30분)로 절약. 1차 커버리지는 네이버+위키가 담당, 구글은 보조.
 
 ---
 
