@@ -27,7 +27,7 @@
    - **시크릿**: `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`, `KAKAO_REST_API_KEY`, `ANTHROPIC_API_KEY` *(Supabase 연동 시 `SUPABASE_URL`·`SUPABASE_SERVICE_ROLE_KEY` 추가)*
    - **`CORS_ORIGIN`**(비시크릿): web이 아직 없으니 임시값 입력 후 §C.3에서 실제 web 오리진으로 갱신. `sync:false`라 이후 resync에도 값 보존.
 3. 자동 적용되는 것(코드 변경 불필요): `$PORT` 주입(앱이 `process.env.PORT` 읽음·`host 0.0.0.0` 바인딩), `GET /health` 헬스체크.
-4. 배포 후 발급된 **API URL**(예: `https://cerebro-api.onrender.com`)을 메모 → B단계에서 사용.
+4. 배포 후 발급된 **API URL**(예: `https://<RENDER-서비스명>.onrender.com`)을 메모 → B단계에서 사용.
 
 **무료 플랜 주의**: ~15분 idle 후 spin-down → 첫 요청 cold start(수십 초) + 인메모리 캐시 초기화. 데모/저트래픽 OK. 상시 워밍 필요 시 유료 Starter.
 
@@ -44,7 +44,7 @@
 | Install Command | *(기본 유지 — Vercel이 워크스페이스 인식 install 수행)* |
 
 **환경변수**(Settings → Environment Variables, 빌드 타임 인라인이므로 빌드 전 설정):
-- `VITE_API_BASE_URL` = A단계 Render API의 **오리진만**(예: `https://cerebro-api.onrender.com` — 끝 슬래시·경로 없이. 클라이언트가 `/api/search`를 덧붙임) *(Production)*
+- `VITE_API_BASE_URL` = A단계 Render API의 **오리진만**(예: `https://<RENDER-서비스명>.onrender.com` — 끝 슬래시·경로 없이. 클라이언트가 `/api/search`를 덧붙임) *(Production)*
 - *(Supabase 연동 시)* `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — **공개값임**(번들에 노출). anon 키만 허용.
 
 ## C. 연결 순서 (닭-달걀 해소)
