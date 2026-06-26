@@ -21,7 +21,6 @@ export const NODE_KINDS = [
 /** 정보 출처의 유형 */
 export const SOURCE_TYPES = [
   'naver',
-  'brave',
   'google',
   'appstore',
   'playstore',

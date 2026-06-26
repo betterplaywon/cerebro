@@ -20,8 +20,6 @@ const EnvSchema = z.object({
   // 키 필요 소스(미설정 시 해당 어댑터 자동 비활성). 값은 .env에서만 주입.
   NAVER_CLIENT_ID: optionalSecret,
   NAVER_CLIENT_SECRET: optionalSecret,
-  // Brave Search(Web Search API) — 구글 Custom Search JSON API 종료(신규 고객 차단) 대체. (ADR-0005)
-  BRAVE_SEARCH_API_KEY: optionalSecret,
 });
 
 export const env = EnvSchema.parse(process.env);
