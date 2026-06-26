@@ -62,6 +62,19 @@ export function layoutGraph(graph: GraphSnapshot): Map<string, Vec3> {
   return positions;
 }
 
+/**
+ * 배치된 노드들을 모두 감싸는 바운딩 구의 반경(원점 기준 최대 거리).
+ * 카메라가 그래프 전체를 프레이밍할 때 기준값으로 쓴다. 빈 그래프는 1을 반환(0 division 방지).
+ */
+export function graphRadius(positions: Map<string, Vec3>): number {
+  let max = 0;
+  for (const [, p] of positions) {
+    const d = Math.hypot(p[0], p[1], p[2]);
+    if (d > max) max = d;
+  }
+  return Math.max(max, 1);
+}
+
 /** 구면에 점을 고르게 분포(황금각). y축은 약간 압축해 보기 좋게. */
 function fibonacciSphere(index: number, count: number, radius: number): Vec3 {
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
