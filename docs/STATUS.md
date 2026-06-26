@@ -4,6 +4,7 @@
 > 최종 갱신: 2026-06-26 · 구글 JSON API 신규고객 영구차단 + 무료 웹검색 API 유료화 → **광범위 웹검색 보류, 네이버+위키 2소스로 출시**(ADR-0005).
 > · 소셜/커뮤니티 검증 → **국내 커뮤니티(네이버 blog/cafe/kin + 카카오 web/blog/cafe) 공식 API로 도입, SNS(X·인스타·페북) 보류**(ADR-0007).
 > · **활용 관점 리포트**: 수집 정보를 Claude(Sonnet 4.6)로 정제해 "핵심 요약 + 관점별 활용법(투자/취업/경제…)"을 자식 노드로 제공(ADR-0008). 키 미설정 시 휴리스틱 그래프로 폴백(지출 0).
+> · **BE+FE 리팩토링 패스 완료(PR #33–#37)**: 리팩토링 기회 망라 감사 워크플로(영역별 병렬 분석 → 적대적 검증) → 검색상태 판별유니온 합성·그래프빌더 전략 디스패처·캐시/HTTP 견고성·매직넘버 상수화·에러 zod 일관화 등 **확정 8건** 처리. **➡️ 다음 단계 = 최적화**(번들 분할·메모이제이션·렌더 비용; 감사 거부 목록에 후보 집적).
 
 ## TL;DR
 기반(문서·8에이전트·모노레포·CI)과 **M1 하이브리드 검색**까지 완료·머지됨. `/api/search`가 **위키백과+네이버**의 실제 공개정보를 수집·정제해 중심-가지 그래프로 반환하고, 프론트(Vite+R3F)가 3D 마인드맵으로 그린다. **구글 Custom Search JSON API는 신규 고객에 영구 차단됨**(공식 — 콘솔은 Enabled여도 호출 시 403). 대체로 검토한 **Brave도 2026-02 무료 폐지(카드 필수)**, Tavily만 무료 1,000건 남음. 보조 웹검색에 카드·과금을 떠안는 건 YAGNI → **지금은 광범위 웹검색을 보류하고 네이버+위키 2소스로 출시**(ADR-0005). 재도입은 트래픽 확인 후(1순위 Tavily).
@@ -40,7 +41,9 @@ apps/api (Fastify)
   src/lib/                 http(SSRF-safe fetch) · rate-limit · cache(TTL+LRU) · text(stripHtml)
   src/env.ts               zod 환경검증(옵셔널 키=빈값→비활성)
 packages/shared            zod 계약 SSOT (Graph/Source/Subject/Search 스키마)  ← 계약 변경은 여기 먼저
-apps/web (Vite+React+R3F)  검색 UI · 세레브로 로더(CSS) · MindMapCanvas(lazy) · DetailPanel · SourceSummary(출처 요약) · api/client
+apps/web (Vite+React+R3F)  App(셸) · SearchBar(URL 진실원·딥링크 입력) · 세레브로 로더(CSS) · MindMapView(3D+노드선택) → MindMapCanvas(lazy) · DetailPanel · SourceSummary
+  hooks/                   useCerebroSearch(서버상태=TanStack Query + 검색어=URL → SearchState 판별유니온 합성) · useUrlSearchParam(useSyncExternalStore)
+  queries/ · api/client    query-factory(키·옵션 팩토리) · searchCerebro(zod 검증·signal 취소)
 ```
 - **새 소스 추가법**: `sources/`에 `SourceAdapter` 구현 + `registry.ts` 등록 → SSRF·캐시·폴백 자동 상속. 키 필요 시 `isEnabled()`로 게이트.
 
@@ -48,7 +51,7 @@ apps/web (Vite+React+R3F)  검색 UI · 세레브로 로더(CSS) · MindMapCanva
 ```bash
 pnpm install
 pnpm dev                 # web :5173 + api :8787
-pnpm typecheck && pnpm test && pnpm lint && pnpm build   # 전체 게이트 (현재 그린, 테스트 150+개)
+pnpm typecheck && pnpm test && pnpm lint && pnpm build   # 전체 게이트 (현재 그린, 테스트 230+개: api 210 + web 23)
 ```
 - 키는 `apps/api/.env`(**gitignore됨**, 커밋 금지)에 있음: 네이버·카카오·Anthropic(작동). 값은 절대 출력/커밋 금지.
 - **활용 리포트 비용 관리**: `ANTHROPIC_API_KEY`가 있으면 검색당 1회 Claude 호출(검색당 ~$0.03~0.05, 캐시 재요청은 0).
@@ -73,9 +76,11 @@ curl -s localhost:8787/api/search -X POST -H 'content-type: application/json' -d
 > 📋 **전체 백로그(코드 근거로 명세된 28건, 티어/수용기준/파일/노력/의존성/비용)는 [`docs/BACKLOG.md`](./BACKLOG.md)** 참조.
 > 아래는 요약. **다음 세션은 NOW 1번부터.**
 
-**✅ 완료**(이력은 §8·ADR): 하이브리드 검색(위키+네이버+카카오) · 출처 표시 UX(PR #13) · 한국어 조사 분리 토큰화(ADR-0004) · 노드 카테고리 분류(ADR-0006) · 국내 커뮤니티 소스(ADR-0007) · 토픽 노이즈 제거(PR #21) · **LLM 활용 관점 리포트(ADR-0008)** · **시네마틱 3D 마인드맵 + 글래스 타일 라벨(PR #22, postprocessing v2 고정)**.
+**✅ 완료**(이력은 §8·ADR): 하이브리드 검색(위키+네이버+카카오) · 출처 표시 UX(PR #13) · 한국어 조사 분리 토큰화(ADR-0004) · 노드 카테고리 분류(ADR-0006) · 국내 커뮤니티 소스(ADR-0007) · 토픽 노이즈 제거(PR #21) · **LLM 활용 관점 리포트(ADR-0008)** · **시네마틱 3D 마인드맵 + 글래스 타일 라벨(PR #22, postprocessing v2 고정)** · **BE+FE 리팩토링 패스(PR #33–#37, 감사 워크플로 기반)**.
 
-**🥇 다음 첫 작업(Top Pick)**: **PIPA/민감정보 필터 고도화**(`pii.ts`에 외국인등록번호·이메일·카드(Luhn)까지 마스킹 — 실측으로 누출 확인) — $0·무의존·단일 파일.
+> 🔧 **현재 진행 트랙 = 코드 품질.** 리팩토링 패스 완료 → **다음은 최적화**(사용자 명시). 최적화 후보(감사에서 "리팩토링 아님/최적화"로 분류돼 보류된 것들): `MindMapCanvas` 번들 ~931kB 코드분할 · `CategoryLegend`/`DetailPanel` 메모이제이션 · `DetailPanel` 출처 필터 O(n·m)→Map · 3D 렌더 비용·모바일 Bloom 저감. 아래 NOW/NEXT는 **M1 출시 게이트(제품 트랙)** — 최적화 트랙과 별개로, 출시 준비 재개 시 1번부터.
+
+**🥇 출시 트랙 첫 작업(Top Pick)**: **PIPA/민감정보 필터 고도화**(`pii.ts`에 외국인등록번호·이메일·카드(Luhn)까지 마스킹 — 실측으로 누출 확인) — $0·무의존·단일 파일.
 
 **NOW**(M1 출시 하드 게이트 + 라이브 예산 안전, 셋 다 $0·즉시 착수):
 1. **PIPA/민감정보 필터 고도화** — 외국인등록번호(성별코드 5~8)·이메일·카드번호 마스킹 추가.
@@ -99,4 +104,7 @@ curl -s localhost:8787/api/search -X POST -H 'content-type: application/json' -d
 - 상세: [CLAUDE.md](../CLAUDE.md) · [FOUNDATION-SPEC](./foundation/FOUNDATION-SPEC.md) · [ADR](./adr/).
 
 ## 8. 머지된 PR (이력)
-#1 기반·체계 · #2~5 Dependabot · #6 웹 코드분할 · #7 수집 골격 · #8 위키 어댑터 · #9 그래프 품질 · #10 네이버·구글 어댑터 · #11 구글 엄선도메인 ADR.
+- **기반·수집(#1–#11)**: #1 기반·체계 · #2~5 Dependabot · #6 웹 코드분할 · #7 수집 골격 · #8 위키 어댑터 · #9 그래프 품질 · #10 네이버·구글 어댑터 · #11 구글 엄선도메인 ADR.
+- **소스·UX·LLM(#12–#23)**: #12 STATUS 핸드오프 · #13 출처 요약·배지 · #14 한국어 조사 토큰화(ADR-0004) · #15 Brave 어댑터→#16 보류·제거 · #17/#18 카테고리 분류·팔레트(ADR-0006) · #19 국내 커뮤니티 소스(ADR-0007) · #20 ADR 재번호 · #21 토픽 노이즈 제거 · #22 시네마틱 3D 마인드맵 · #23 LLM 활용 관점 리포트(ADR-0008).
+- **리팩토링 패스(#24–#37)**: #24 수집 보일러플레이트 공용화(fetchJson) · #25 BACKLOG.md · #26 Search Orchestrator 분리 · #27 TanStack Query 이관(+MSW) · #28 외부응답 zod 검증 · #29 query-factory 패턴 · #30 검색어 진실원 URL화 · #31 일관 에러 스키마 · #32 매직넘버 상수화·중첩삼항 제거 · **#33 판별유니온+MindMapView · #34 그래프빌더 디스패처 · #35 캐시/HTTP 견고성 · #36 명료화·naver 가드 · #37 에러 zod 일관화·딥링크 입력**.
+- **문서(#38)**: #38 README 다국어화.
