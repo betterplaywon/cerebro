@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Html, Line, OrbitControls } from '@react-three/drei';
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
-import { Vector3 } from 'three';
+import { PerspectiveCamera, Vector3 } from 'three';
 import type { GraphNode, GraphSnapshot, NodeKind } from '@cerebro/shared';
-import { layoutGraph, type Vec3 } from '../lib/layout';
+import { graphRadius, layoutGraph, type Vec3 } from '../lib/layout';
+import { fitCameraDistance } from '../lib/camera';
 import { NODE_COLORS } from '../lib/colors';
 import { CategoryIcon } from './CategoryIcon';
 
@@ -23,7 +24,16 @@ const SCENE = {
   focus: { lerp: 0.12, settleDistance: 0.04 },
   bloom: { intensity: 0.55, luminanceThreshold: 0.32, luminanceSmoothing: 0.9 },
   vignette: { offset: 0.3, darkness: 0.5 },
+  /** 그래프 전체를 화면에 담을 때의 여백 배수(세로 화면에서 좌우 잘림 방지). */
+  fit: { margin: 1.2 },
+  /** 클릭/호버용 투명 히트 구 반경 — 작은 글로우 코어 대신 넉넉히 잡아 조준성↑. */
+  hit: { center: 0.95, branch: 0.6 },
+  /** 줌 한계: 너무 가깝거나(노드 통과) 너무 멀어(프레이밍 깨짐) 잘리지 않게. */
+  orbit: { minDistance: 2.5, maxDistanceFactor: 10 },
 };
+
+/** 원점(중심 노드 위치) — CameraRig에서 읽기 전용으로 재사용. */
+const ORIGIN = new Vector3(0, 0, 0);
 
 /** 노드 종류별 타일 변형 클래스(중첩 삼항 대신 매핑). 미지정 종류는 기본 타일. */
 const TILE_VARIANT_CLASS: Partial<Record<NodeKind, string>> = {
@@ -41,6 +51,7 @@ interface NodeViewProps {
   node: GraphNode;
   position: Vec3;
   selected: boolean;
+  hovered: boolean;
   onSelect: (node: GraphNode) => void;
 }
 
@@ -62,12 +73,14 @@ function NodeGlow({ node, position }: { node: GraphNode; position: Vec3 }) {
   );
 }
 
-/** 노드 = 글래스 아이콘 타일(Html). 카테고리/중심은 아이콘+라벨, concept는 키워드 태그. 클릭=선택. */
-function NodeTile({ node, position, selected, onSelect }: NodeViewProps) {
+/** 노드 라벨 = 글래스 아이콘 타일(Html, **시각 전용**: pointer-events 없음).
+ *  마우스/터치 선택은 3D 히트 구(NodeHitTarget)가 담당해 드래그-회전을 가로채지 않는다.
+ *  키보드 접근성을 위해 button은 유지(포커스+Enter로 선택; pointer-events:none이라 회전엔 영향 없음). */
+function NodeTile({ node, position, selected, hovered, onSelect }: NodeViewProps) {
   const isCenter = node.kind === 'center';
   const isConcept = node.kind === 'concept';
   const variant = TILE_VARIANT_CLASS[node.kind] ?? '';
-  const selectedClass = selected ? ' is-selected' : '';
+  const stateClass = `${selected ? ' is-selected' : ''}${hovered ? ' is-hover' : ''}`;
   return (
     <Html
       position={position}
@@ -78,7 +91,7 @@ function NodeTile({ node, position, selected, onSelect }: NodeViewProps) {
     >
       <button
         type="button"
-        className={`node-tile${variant}${selectedClass}`}
+        className={`node-tile${variant}${stateClass}`}
         style={{ '--node-color': NODE_COLORS[node.kind] } as CSSProperties}
         onClick={(e) => {
           e.stopPropagation();
@@ -93,6 +106,45 @@ function NodeTile({ node, position, selected, onSelect }: NodeViewProps) {
         <span className="node-tile__label">{node.label}</span>
       </button>
     </Html>
+  );
+}
+
+/** 노드별 투명 히트 구 — 클릭=선택, 호버=커서/하이라이트를 3D 레이캐스트로 처리한다.
+ *  Html 타일에서 pointer-events를 떼어내 OrbitControls 드래그-회전이 어디서나 동작하게 만든다. */
+function NodeHitTarget({
+  node,
+  position,
+  onSelect,
+  onHover,
+}: {
+  node: GraphNode;
+  position: Vec3;
+  onSelect: (node: GraphNode) => void;
+  onHover: (id: string | null) => void;
+}) {
+  const gl = useThree((s) => s.gl);
+  const radius = node.kind === 'center' ? SCENE.hit.center : SCENE.hit.branch;
+  return (
+    <mesh
+      position={position}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect(node);
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        onHover(node.id);
+        gl.domElement.style.cursor = 'pointer';
+      }}
+      onPointerOut={() => {
+        onHover(null);
+        gl.domElement.style.cursor = '';
+      }}
+    >
+      <sphereGeometry args={[radius, 12, 12]} />
+      {/* 보이지 않지만 레이캐스트는 받는 표면(visible=false는 레이캐스트 제외되므로 opacity 0 사용). */}
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
   );
 }
 
@@ -119,9 +171,32 @@ function FocusController({ target }: { target: Vec3 | null }) {
   return null;
 }
 
+/** 그래프 바운딩 구를 종횡비에 맞춰 프레이밍 — three.js fov는 세로 화각이라 세로 화면(모바일)에선
+ *  가로가 잘린다. 마운트·리사이즈 시 카메라 거리를 자동 조정한다(현재 시야 방향은 보존). */
+function CameraRig({ radius }: { radius: number }) {
+  const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
+  const controls = useThree((s) => s.controls) as OrbitLike | null;
+  useEffect(() => {
+    if (!(camera instanceof PerspectiveCamera)) return;
+    const aspect = size.width / Math.max(size.height, 1);
+    const distance = fitCameraDistance(radius, camera.fov, aspect, SCENE.fit.margin);
+    const target = controls?.target ?? ORIGIN;
+    const dir = camera.position.clone().sub(target);
+    if (dir.lengthSq() < 1e-6) dir.set(0, 0, 1);
+    dir.normalize();
+    camera.position.copy(target).addScaledVector(dir, distance);
+    camera.updateProjectionMatrix();
+    controls?.update();
+  }, [radius, size.width, size.height, camera, controls]);
+  return null;
+}
+
 /** 3D 마인드맵: 글로우 코어 + 글래스 아이콘 타일 + 글로우 가지 + 절제된 Bloom. 클릭 시 해당 노드로 포커스. */
 export function MindMapCanvas({ graph, selectedId, onSelect }: MindMapCanvasProps) {
   const positions = useMemo(() => layoutGraph(graph), [graph]);
+  const boundingRadius = useMemo(() => graphRadius(positions), [positions]);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const edgeLines = useMemo(() => {
     return graph.edges
@@ -165,12 +240,34 @@ export function MindMapCanvas({ graph, selectedId, onSelect }: MindMapCanvasProp
             node={node}
             position={position}
             selected={node.id === selectedId}
+            hovered={node.id === hoveredId}
             onSelect={onSelect}
           />
         ) : null;
       })}
 
-      <OrbitControls makeDefault enablePan enableZoom enableRotate />
+      {graph.nodes.map((node) => {
+        const position = positions.get(node.id);
+        return position ? (
+          <NodeHitTarget
+            key={`hit-${node.id}`}
+            node={node}
+            position={position}
+            onSelect={onSelect}
+            onHover={setHoveredId}
+          />
+        ) : null;
+      })}
+
+      <OrbitControls
+        makeDefault
+        enablePan
+        enableZoom
+        enableRotate
+        minDistance={SCENE.orbit.minDistance}
+        maxDistance={boundingRadius * SCENE.orbit.maxDistanceFactor}
+      />
+      <CameraRig radius={boundingRadius} />
       <FocusController target={selectedPos} />
 
       <EffectComposer>

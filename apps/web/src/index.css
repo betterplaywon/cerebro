@@ -478,8 +478,9 @@ body {
 }
 
 .node-tile {
-  pointer-events: auto;
-  cursor: pointer;
+  /* 시각 전용: 포인터 이벤트를 받지 않아 드래그-회전이 캔버스(OrbitControls)로 전달된다.
+     마우스/터치 선택은 3D 히트 구가 레이캐스트로 처리(키보드 선택은 button focus+Enter). */
+  pointer-events: none;
   display: inline-flex;
   align-items: center;
   gap: 0.34rem;
@@ -508,8 +509,15 @@ body {
     box-shadow 0.12s ease;
 }
 
-.node-tile:hover {
+/* 호버 하이라이트는 3D 히트 구의 레이캐스트로 토글되는 클래스로 구동(타일 자체는 포인터 비수신). */
+.node-tile.is-hover {
   transform: scale(1.06);
+}
+
+/* 키보드 포커스 링 — 포인터 호버가 사라진 자리의 접근성 보강. */
+.node-tile:focus-visible {
+  outline: 2px solid var(--node-color);
+  outline-offset: 2px;
 }
 
 .node-tile__icon {
