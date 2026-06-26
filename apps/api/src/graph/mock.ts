@@ -33,7 +33,7 @@ export function buildMockGraph(query: string, type: SubjectType = 'unknown'): Gr
     sourceIds: ['s-wiki'],
   };
 
-  const branches: Array<Omit<GraphNode, 'id'> & { id: string }> = [
+  const branches: GraphNode[] = [
     { id: 'n-product', label: '제품·서비스', kind: 'product', importance: 0.8, confidence: 0.7, sourceIds: ['s-store'], summary: '대표 제품/서비스' },
     { id: 'n-news', label: '뉴스·이슈', kind: 'news', importance: 0.75, confidence: 0.65, sourceIds: ['s-naver'], summary: '최근 언급/이슈' },
     { id: 'n-reputation', label: '평판·리뷰', kind: 'reputation', importance: 0.7, confidence: 0.55, sourceIds: ['s-blog'], summary: '사용자 평판' },

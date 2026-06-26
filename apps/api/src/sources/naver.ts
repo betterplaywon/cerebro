@@ -109,8 +109,11 @@ function toRawItem(item: NaverItem, sourceType: SourceType | undefined): RawItem
   } catch {
     return null;
   }
+  // HTML 태그만 있던 제목은 stripHtml 후 빈 문자열이 된다 → 빈 라벨 노드 방지(kakao 어댑터와 동일 가드).
+  const title = stripHtml(item.title);
+  if (!title) return null;
   return {
-    title: stripHtml(item.title),
+    title,
     url: item.link,
     snippet: stripHtml(item.description ?? '') || undefined,
     publishedAt: toIsoDate(item.pubDate),
