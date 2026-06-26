@@ -7,6 +7,12 @@ export interface RawItem {
   snippet?: string;
   /** 원문 게시 시각(ISO 8601), 있으면 */
   publishedAt?: string;
+  /**
+   * 항목별 출처 유형 오버라이드. 미지정 시 어댑터의 `sourceType`을 따른다.
+   * 한 어댑터가 여러 엔드포인트(예: 네이버 blog/cafe/kin)를 수집할 때
+   * 항목마다 정확한 유형 배지(블로그/커뮤니티)를 붙이기 위함(출처 투명성).
+   */
+  sourceType?: SourceType;
 }
 
 export interface CollectContext {
