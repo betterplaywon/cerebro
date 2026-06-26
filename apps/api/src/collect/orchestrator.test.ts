@@ -23,6 +23,16 @@ describe('collectAll', () => {
     expect(res.items).toHaveLength(1);
   });
 
+  it('위험 스킴(javascript:) 링크 항목은 걸러낸다', async () => {
+    const a = stub('a', [
+      { title: 'OK', url: 'https://e.com/ok' },
+      { title: 'XSS', url: 'javascript:alert(1)' },
+    ]);
+    const res = await collectAll('q', undefined, NOW, [a]);
+    expect(res.items).toHaveLength(1);
+    expect(res.items[0]?.source.url).toBe('https://e.com/ok');
+  });
+
   it('실패한 어댑터는 건너뛰고 나머지로 진행한다', async () => {
     const ok = stub('ok', [{ title: 'X', url: 'https://e.com/1' }]);
     const bad: SourceAdapter = {

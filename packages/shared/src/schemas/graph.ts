@@ -11,6 +11,26 @@ import { NODE_KINDS, SOURCE_TYPES, SUBJECT_TYPES } from '../constants.js';
 const unitInterval = z.number().min(0).max(1);
 const isoDateTime = z.string().datetime({ message: 'ISO 8601 datetime 이어야 합니다' });
 
+/**
+ * 출처 링크 URL. http(s) 스킴만 허용한다.
+ * `z.string().url()` 단독은 `javascript:`·`data:` 등 위험 스킴을 통과시키므로,
+ * 링크가 화면에 `href`로 렌더되기 전 경계(SSOT)에서 차단한다(XSS 방지).
+ */
+const SAFE_URL_PROTOCOLS = new Set(['http:', 'https:']);
+const httpUrl = z
+  .string()
+  .url()
+  .refine(
+    (value) => {
+      try {
+        return SAFE_URL_PROTOCOLS.has(new URL(value).protocol);
+      } catch {
+        return false;
+      }
+    },
+    { message: 'http(s) URL만 허용됩니다' },
+  );
+
 export const SubjectTypeSchema = z.enum(SUBJECT_TYPES);
 export const NodeKindSchema = z.enum(NODE_KINDS);
 export const SourceTypeSchema = z.enum(SOURCE_TYPES);
@@ -20,7 +40,7 @@ export const SourceSchema = z.object({
   id: z.string().min(1),
   type: SourceTypeSchema,
   title: z.string().min(1),
-  url: z.string().url(),
+  url: httpUrl,
   snippet: z.string().optional(),
   author: z.string().optional(),
   /** 원문 게시 시각(있으면) */
