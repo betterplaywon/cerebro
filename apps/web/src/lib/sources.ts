@@ -3,7 +3,6 @@ import { SOURCE_TYPES, type Source, type SourceType } from '@cerebro/shared';
 /** 출처 유형의 한국어 라벨 (화면 표기 — 색 단독 금지, 항상 라벨 동반). */
 export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
   naver: '네이버',
-  brave: '브레이브',
   google: '구글',
   appstore: '앱스토어',
   playstore: '플레이스토어',

@@ -45,7 +45,6 @@ const BASE_CONFIDENCE: Partial<Record<SourceType, number>> = {
   official: 0.9,
   wikipedia: 0.85,
   naver: 0.7,
-  brave: 0.65,
   google: 0.7,
   appstore: 0.65,
   playstore: 0.65,
