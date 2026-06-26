@@ -1,0 +1,56 @@
+# render.yaml — cerebro API 전용 Render Blueprint (apps/api만 배포)
+# 프론트(apps/web)는 Vercel로 배포합니다 — 이 파일엔 API 서비스만 정의(ADR-0009).
+# 배치 위치: 레포 루트(/render.yaml). 스펙: https://render.com/docs/blueprint-spec
+#
+# 🔑 골든룰 1: 시크릿은 전부 `sync: false`(값 없음)로만 선언합니다.
+#    Blueprint 최초 동기화 시 Render 대시보드가 각 값을 입력받아 암호화 저장하며,
+#    값은 절대 레포에 들어가지 않습니다. 리터럴 `value:`에 시크릿을 넣으면 깃 평문 노출 = 금지.
+
+services:
+  - name: cerebro-api
+    type: web
+    runtime: node
+    plan: free
+    region: singapore # 한국 사용자 최근접 무료 리전(원하면 변경)
+    rootDir: . # 레포 루트(기본값과 동일·명시). 워크스페이스 전체가 빌드 트리거
+    # 루트에서 frozen-lockfile 설치 → 워크스페이스 전체 링크.
+    # tsx는 dependencies에 있으므로 prod 설치에서도 보존됨(런타임 의존성 — start가 tsx로 .ts 실행).
+    # corepack으로 packageManager 핀(pnpm@10.33.2)을 명시 활성화 → Render 번들 pnpm 버전
+    # 불일치(ERR_PNPM_BAD_PM_VERSION; lockfile v9.0)로 인한 첫 배포 실패 방지.
+    buildCommand: corepack enable && corepack prepare pnpm@10.33.2 --activate && pnpm install --frozen-lockfile
+    # 워크스페이스 루트에서 api 패키지의 start(`tsx src/index.ts`) 실행.
+    startCommand: pnpm --filter @cerebro/api start
+    healthCheckPath: /health # 앱이 GET /health 제공 → 무중단 배포 헬스체크
+    autoDeployTrigger: commit # 연결 브랜치 푸시 시 재배포
+    envVars:
+      # ── Node 버전 핀(>=22). NODE_VERSION이 최우선(.nvmrc/engines 오버라이드) ──
+      - key: NODE_VERSION
+        value: '22.14.0' # 정확한 22.x 릴리스. 배포 시점 가용 버전 확인·필요시 상향.
+      # ── 비시크릿 런타임 설정(값 커밋 안전) ──
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        # web 배포 후 실제 Vercel 오리진을 대시보드에 입력(끝 슬래시·와일드카드 없이).
+        # 비시크릿이지만 sync:false로 둠 → 대시보드 값이 Blueprint resync에도 보존
+        # (리터럴 value면 이후 render.yaml 변경 시 placeholder로 되돌아가 CORS가 깨짐).
+        sync: false
+      - key: CACHE_TTL_MS
+        value: '1800000' # 30분(앱 기본값과 일치)
+      - key: ANALYSIS_MODEL
+        value: claude-sonnet-4-6
+      # ── 🔑 시크릿: 값 없음(sync:false). 값은 Render 대시보드에서만 입력 ──
+      - key: NAVER_CLIENT_ID
+        sync: false
+      - key: NAVER_CLIENT_SECRET
+        sync: false
+      - key: KAKAO_REST_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # ── (예정) Supabase 연동 시 주석 해제. SERVICE_ROLE_KEY는 서버 전용·절대 VITE_ 금지 ──
+      # - key: SUPABASE_URL
+      #   sync: false
+      # - key: SUPABASE_SERVICE_ROLE_KEY
+      #   sync: false
+    # PORT는 선언하지 않습니다 — Render가 $PORT 주입, 앱이 process.env.PORT(기본 8787) 읽고
+    # host 0.0.0.0 바인딩(이미 충족). PORT를 박으면 라우팅/헬스체크가 깨집니다.

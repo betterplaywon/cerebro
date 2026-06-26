@@ -12,3 +12,5 @@
 | [0005](./0005-defer-broad-web-search.md) | 구글 Custom Search 폐기 + 광범위 웹검색 보류 | Accepted |
 | [0006](./0006-node-category-palette.md) | 노드 카테고리 팔레트 SSOT 정렬 + concept 색 등록 | Accepted |
 | [0007](./0007-social-community-sources.md) | 국내 커뮤니티 소스(네이버/카카오 공식 API) 도입 + SNS 보류 | Accepted |
+| [0008](./0008-llm-usage-report.md) | 활용 관점 리포트: 수집 정보를 Claude로 정제해 활용법 제공 | Accepted |
+| [0009](./0009-deploy-split-vercel-render.md) | 배포 분리: web=Vercel · api=Render (Supabase 관리형) | Accepted |
