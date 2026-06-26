@@ -71,7 +71,68 @@ describe('isTransientFetchError', () => {
     expect(isTransientFetchError(new SafeFetchError('x', 'NETWORK'))).toBe(true);
     expect(isTransientFetchError(new SafeFetchError('x', 'TIMEOUT'))).toBe(true);
     expect(isTransientFetchError(new SafeFetchError('x', 'HOST_NOT_ALLOWED'))).toBe(false);
+    expect(isTransientFetchError(new SafeFetchError('x', 'ABORT'))).toBe(false);
     expect(isTransientFetchError(new Error('x'))).toBe(false);
+  });
+});
+
+describe('safeFetch 타임아웃 vs 외부 취소 구분', () => {
+  /** 주어진 signal이 abort되면 거부하는 fetch 모킹(실제 네트워크 취소 흉내). */
+  function abortAwareFetch() {
+    return vi.fn((_url: URL, init: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () =>
+          reject(new DOMException('aborted', 'AbortError')),
+        );
+      }),
+    );
+  }
+
+  it('타임아웃이면 TIMEOUT 코드로 던진다', async () => {
+    const f = abortAwareFetch();
+    await expect(
+      safeFetch('https://ko.wikipedia.org/api', {
+        allowHosts: ALLOW,
+        fetchImpl: f as unknown as typeof fetch,
+        timeoutMs: 5,
+      }),
+    ).rejects.toMatchObject({ code: 'TIMEOUT' });
+  });
+
+  it('외부 signal 취소는 ABORT 코드로 던진다(타임아웃과 구분)', async () => {
+    const ac = new AbortController();
+    const f = abortAwareFetch();
+    const p = safeFetch('https://ko.wikipedia.org/api', {
+      allowHosts: ALLOW,
+      fetchImpl: f as unknown as typeof fetch,
+      signal: ac.signal,
+      timeoutMs: 5000,
+    });
+    ac.abort();
+    await expect(p).rejects.toMatchObject({ code: 'ABORT' });
+  });
+
+  it('fetchJson은 외부 취소(ABORT)를 재시도하지 않는다', async () => {
+    const ac = new AbortController();
+    let calls = 0;
+    const f = vi.fn((_url: URL, init: RequestInit) => {
+      calls += 1;
+      return new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () =>
+          reject(new DOMException('aborted', 'AbortError')),
+        );
+      });
+    });
+    const p = fetchJson('https://ko.wikipedia.org/api', {
+      allowHosts: ALLOW,
+      fetchImpl: f as unknown as typeof fetch,
+      signal: ac.signal,
+      retries: 3,
+      retryBaseMs: 1,
+    });
+    ac.abort();
+    await expect(p).rejects.toMatchObject({ code: 'ABORT' });
+    expect(calls).toBe(1); // 재시도 없이 즉시 중단
   });
 });
 

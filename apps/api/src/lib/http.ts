@@ -14,6 +14,7 @@ export type SafeFetchErrorCode =
   | 'HOST_NOT_ALLOWED'
   | 'REDIRECT_BLOCKED'
   | 'TIMEOUT'
+  | 'ABORT'
   | 'NETWORK';
 
 export class SafeFetchError extends Error {
@@ -78,8 +79,15 @@ export async function safeFetch(rawUrl: string, opts: SafeFetchOptions): Promise
     throw new SafeFetchError(`허용되지 않은 호스트: ${host}`, 'HOST_NOT_ALLOWED');
   }
 
+  // 타임아웃과 외부 취소(signal)는 둘 다 controller.abort()로 귀결되므로,
+  // 어느 쪽이 먼저 발화했는지 플래그로 구분한다 — 타임아웃만 재시도 대상이고
+  // 외부 취소(ABORT)는 사용자 의도(취소)라 재시도하면 안 되기 때문.
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 5000);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, opts.timeoutMs ?? 5000);
   const onExternalAbort = () => controller.abort();
   opts.signal?.addEventListener('abort', onExternalAbort, { once: true });
 
@@ -92,7 +100,8 @@ export async function safeFetch(rawUrl: string, opts: SafeFetchOptions): Promise
       signal: controller.signal,
     });
   } catch (e) {
-    if (controller.signal.aborted) throw new SafeFetchError('요청 시간 초과', 'TIMEOUT');
+    if (timedOut) throw new SafeFetchError('요청 시간 초과', 'TIMEOUT');
+    if (controller.signal.aborted) throw new SafeFetchError('요청이 취소되었습니다', 'ABORT');
     throw new SafeFetchError(`네트워크 오류: ${(e as Error).message}`, 'NETWORK');
   } finally {
     clearTimeout(timer);

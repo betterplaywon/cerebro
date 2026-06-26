@@ -28,4 +28,17 @@ describe('createTTLCache', () => {
     expect(c.get('a')).toBeUndefined();
     expect(c.get('c')).toBe(3);
   });
+
+  it('has()는 순수 조회 — LRU 순서를 바꾸지 않는다', () => {
+    const c = createTTLCache<number>({ ttlMs: 1000, maxEntries: 2 });
+    c.set('a', 1);
+    c.set('b', 2);
+    // has('a')가 LRU를 건드리면 'a'가 최신이 되어 다음 set에서 'b'가 밀려난다.
+    expect(c.has('a')).toBe(true);
+    c.set('c', 3);
+    // 순수 조회라면 가장 오래된 'a'가 제거되고 'b'는 유지된다.
+    expect(c.get('a')).toBeUndefined();
+    expect(c.get('b')).toBe(2);
+    expect(c.get('c')).toBe(3);
+  });
 });

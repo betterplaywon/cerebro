@@ -42,10 +42,25 @@ export function createTTLCache<T>(opts: { ttlMs: number; maxEntries?: number }):
     }
   }
 
+  /**
+   * 순수 존재 확인 — get()과 달리 LRU 순서를 건드리지 않는다.
+   * (조회가 사용 순서를 바꾸면 다음 set의 eviction 대상이 달라지는 부수효과가 생긴다.)
+   * 만료 항목은 정리하되, 이는 죽은 키 1개 제거라 다른 키의 LRU 순서에 영향이 없다.
+   */
+  function has(key: string): boolean {
+    const entry = store.get(key);
+    if (!entry) return false;
+    if (Date.now() > entry.expires) {
+      store.delete(key);
+      return false;
+    }
+    return true;
+  }
+
   return {
     get,
     set,
-    has: (key) => get(key) !== undefined,
+    has,
     delete: (key) => void store.delete(key),
     get size() {
       return store.size;
