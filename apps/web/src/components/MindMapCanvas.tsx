@@ -3,10 +3,33 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Html, Line, OrbitControls } from '@react-three/drei';
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
 import { Vector3 } from 'three';
-import type { GraphNode, GraphSnapshot } from '@cerebro/shared';
+import type { GraphNode, GraphSnapshot, NodeKind } from '@cerebro/shared';
 import { layoutGraph, type Vec3 } from '../lib/layout';
 import { NODE_COLORS } from '../lib/colors';
 import { CategoryIcon } from './CategoryIcon';
+
+/** 3D 씬 시각 튜닝 상수 — 매직넘버를 한곳에 모아 의미를 드러내고 튜닝을 쉽게 한다. */
+const SCENE = {
+  camera: { position: [0, 0, 15] as [number, number, number], fov: 55 },
+  dpr: [1, 2] as [number, number],
+  lights: {
+    ambient: 0.5,
+    key: { position: [10, 10, 10] as [number, number, number], intensity: 1 },
+    rim: { position: [-10, -6, -8] as [number, number, number], intensity: 0.45, color: '#3a6bff' },
+  },
+  glow: { centerRadius: 0.42, branchRadius: 0.18, centerEmissive: 1.7, branchEmissive: 1.15 },
+  tile: { distanceFactor: 12, centerIcon: 20, branchIcon: 16 },
+  edge: { color: '#3ac8f5', width: 1.3, opacity: 0.45 },
+  focus: { lerp: 0.12, settleDistance: 0.04 },
+  bloom: { intensity: 0.55, luminanceThreshold: 0.32, luminanceSmoothing: 0.9 },
+  vignette: { offset: 0.3, darkness: 0.5 },
+};
+
+/** 노드 종류별 타일 변형 클래스(중첩 삼항 대신 매핑). 미지정 종류는 기본 타일. */
+const TILE_VARIANT_CLASS: Partial<Record<NodeKind, string>> = {
+  center: ' node-tile--center',
+  concept: ' node-tile--concept',
+};
 
 interface MindMapCanvasProps {
   graph: GraphSnapshot;
@@ -27,11 +50,11 @@ function NodeGlow({ node, position }: { node: GraphNode; position: Vec3 }) {
   const isCenter = node.kind === 'center';
   return (
     <mesh position={position}>
-      <sphereGeometry args={[isCenter ? 0.42 : 0.18, 20, 20]} />
+      <sphereGeometry args={[isCenter ? SCENE.glow.centerRadius : SCENE.glow.branchRadius, 20, 20]} />
       <meshStandardMaterial
         color={color}
         emissive={color}
-        emissiveIntensity={isCenter ? 1.7 : 1.15}
+        emissiveIntensity={isCenter ? SCENE.glow.centerEmissive : SCENE.glow.branchEmissive}
         roughness={0.3}
         metalness={0.1}
       />
@@ -43,12 +66,19 @@ function NodeGlow({ node, position }: { node: GraphNode; position: Vec3 }) {
 function NodeTile({ node, position, selected, onSelect }: NodeViewProps) {
   const isCenter = node.kind === 'center';
   const isConcept = node.kind === 'concept';
-  const variant = isCenter ? ' node-tile--center' : isConcept ? ' node-tile--concept' : '';
+  const variant = TILE_VARIANT_CLASS[node.kind] ?? '';
+  const selectedClass = selected ? ' is-selected' : '';
   return (
-    <Html position={position} center distanceFactor={12} zIndexRange={[0, 0]} wrapperClass="node-tile-wrap">
+    <Html
+      position={position}
+      center
+      distanceFactor={SCENE.tile.distanceFactor}
+      zIndexRange={[0, 0]}
+      wrapperClass="node-tile-wrap"
+    >
       <button
         type="button"
-        className={`node-tile${variant}${selected ? ' is-selected' : ''}`}
+        className={`node-tile${variant}${selectedClass}`}
         style={{ '--node-color': NODE_COLORS[node.kind] } as CSSProperties}
         onClick={(e) => {
           e.stopPropagation();
@@ -57,7 +87,7 @@ function NodeTile({ node, position, selected, onSelect }: NodeViewProps) {
       >
         {!isConcept && (
           <span className="node-tile__icon">
-            <CategoryIcon kind={node.kind} size={isCenter ? 20 : 16} />
+            <CategoryIcon kind={node.kind} size={isCenter ? SCENE.tile.centerIcon : SCENE.tile.branchIcon} />
           </span>
         )}
         <span className="node-tile__label">{node.label}</span>
@@ -82,9 +112,9 @@ function FocusController({ target }: { target: Vec3 | null }) {
   }, [dest]);
   useFrame(() => {
     if (!controls || !dest || settled.current) return;
-    controls.target.lerp(dest, 0.12);
+    controls.target.lerp(dest, SCENE.focus.lerp);
     controls.update();
-    if (controls.target.distanceTo(dest) < 0.04) settled.current = true;
+    if (controls.target.distanceTo(dest) < SCENE.focus.settleDistance) settled.current = true;
   });
   return null;
 }
@@ -106,13 +136,20 @@ export function MindMapCanvas({ graph, selectedId, onSelect }: MindMapCanvasProp
   const selectedPos = selectedId ? (positions.get(selectedId) ?? null) : null;
 
   return (
-    <Canvas camera={{ position: [0, 0, 15], fov: 55 }} dpr={[1, 2]} gl={{ alpha: true, antialias: true }}>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={1.0} />
-      <pointLight position={[-10, -6, -8]} intensity={0.45} color="#3a6bff" />
+    <Canvas camera={{ position: SCENE.camera.position, fov: SCENE.camera.fov }} dpr={SCENE.dpr} gl={{ alpha: true, antialias: true }}>
+      <ambientLight intensity={SCENE.lights.ambient} />
+      <pointLight position={SCENE.lights.key.position} intensity={SCENE.lights.key.intensity} />
+      <pointLight position={SCENE.lights.rim.position} intensity={SCENE.lights.rim.intensity} color={SCENE.lights.rim.color} />
 
       {edgeLines.map((edge) => (
-        <Line key={edge.id} points={edge.points} color="#3ac8f5" lineWidth={1.3} transparent opacity={0.45} />
+        <Line
+          key={edge.id}
+          points={edge.points}
+          color={SCENE.edge.color}
+          lineWidth={SCENE.edge.width}
+          transparent
+          opacity={SCENE.edge.opacity}
+        />
       ))}
 
       {graph.nodes.map((node) => {
@@ -137,8 +174,13 @@ export function MindMapCanvas({ graph, selectedId, onSelect }: MindMapCanvasProp
       <FocusController target={selectedPos} />
 
       <EffectComposer>
-        <Bloom intensity={0.55} luminanceThreshold={0.32} luminanceSmoothing={0.9} mipmapBlur />
-        <Vignette offset={0.3} darkness={0.5} />
+        <Bloom
+          intensity={SCENE.bloom.intensity}
+          luminanceThreshold={SCENE.bloom.luminanceThreshold}
+          luminanceSmoothing={SCENE.bloom.luminanceSmoothing}
+          mipmapBlur
+        />
+        <Vignette offset={SCENE.vignette.offset} darkness={SCENE.vignette.darkness} />
       </EffectComposer>
     </Canvas>
   );
