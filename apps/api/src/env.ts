@@ -20,6 +20,8 @@ const EnvSchema = z.object({
   // 키 필요 소스(미설정 시 해당 어댑터 자동 비활성). 값은 .env에서만 주입.
   NAVER_CLIENT_ID: optionalSecret,
   NAVER_CLIENT_SECRET: optionalSecret,
+  // 카카오(다음) 검색 API — 국내 커뮤니티 커버리지 보완(미설정 시 kakao 어댑터 비활성).
+  KAKAO_REST_API_KEY: optionalSecret,
 });
 
 export const env = EnvSchema.parse(process.env);
