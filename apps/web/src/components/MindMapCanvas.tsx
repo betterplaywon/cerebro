@@ -1,9 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { Canvas, type ThreeEvent } from '@react-three/fiber';
-import { Line, OrbitControls } from '@react-three/drei';
+import { Html, Line, OrbitControls } from '@react-three/drei';
 import type { GraphNode, GraphSnapshot } from '@cerebro/shared';
 import { layoutGraph, type Vec3 } from '../lib/layout';
 import { NODE_COLORS } from '../lib/colors';
+
+/** 노드 반지름(구체·라벨 오프셋 공용) — 중요도에 비례. */
+function nodeRadius(node: GraphNode): number {
+  return 0.3 + node.importance * 0.7;
+}
 
 interface MindMapCanvasProps {
   graph: GraphSnapshot;
@@ -18,9 +23,37 @@ interface NodeSphereProps {
   onSelect: (node: GraphNode) => void;
 }
 
+/** 노드 위에 떠 있는 HTML 라벨. 한글 글리프를 위해 `<Text>`(폰트 번들 필요) 대신 `Html`로
+ *  페이지 폰트(Pretendard/Noto Sans KR)를 그대로 쓴다. 카테고리 색 테두리, 중심·선택 강조. */
+function NodeLabel({ node, position, selected }: Omit<NodeSphereProps, 'onSelect'>) {
+  const labelY = position[1] + nodeRadius(node) + 0.25;
+  const variant =
+    node.kind === 'center'
+      ? ' node-label--center'
+      : node.kind === 'concept'
+        ? ' node-label--concept'
+        : '';
+  return (
+    <Html
+      position={[position[0], labelY, position[2]]}
+      center
+      distanceFactor={10}
+      zIndexRange={[0, 0]}
+      wrapperClass="node-label-wrap"
+    >
+      <span
+        className={`node-label${variant}${selected ? ' is-selected' : ''}`}
+        style={{ '--node-color': NODE_COLORS[node.kind] } as CSSProperties}
+      >
+        {node.label}
+      </span>
+    </Html>
+  );
+}
+
 function NodeSphere({ node, position, selected, onSelect }: NodeSphereProps) {
   const [hovered, setHovered] = useState(false);
-  const radius = 0.3 + node.importance * 0.7;
+  const radius = nodeRadius(node);
   const color = NODE_COLORS[node.kind];
   const emissiveIntensity = selected ? 0.95 : hovered ? 0.6 : 0.25;
 
@@ -89,6 +122,19 @@ export function MindMapCanvas({ graph, selectedId, onSelect }: MindMapCanvasProp
             position={position}
             selected={node.id === selectedId}
             onSelect={onSelect}
+          />
+        );
+      })}
+
+      {graph.nodes.map((node) => {
+        const position = positions.get(node.id);
+        if (!position) return null;
+        return (
+          <NodeLabel
+            key={`label-${node.id}`}
+            node={node}
+            position={position}
+            selected={node.id === selectedId}
           />
         );
       })}
