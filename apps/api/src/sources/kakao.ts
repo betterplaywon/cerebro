@@ -1,6 +1,7 @@
-import { safeFetch, SafeFetchError } from '../lib/http.js';
-import { createRateLimiter, withRetry } from '../lib/rate-limit.js';
+import { fetchJson } from '../lib/http.js';
+import { createRateLimiter } from '../lib/rate-limit.js';
 import { stripHtml } from '../lib/text.js';
+import { toIsoDate } from '../lib/dates.js';
 import { env } from '../env.js';
 import type { SourceType } from '@cerebro/shared';
 import type { CollectContext, RawItem, SourceAdapter } from './types.js';
@@ -70,20 +71,14 @@ export function createKakaoAdapter(deps: KakaoDeps = {}): SourceAdapter {
           const url =
             `https://${KAKAO_HOST}/v2/search/${path}` +
             `?query=${encodeURIComponent(query)}&size=${size}`;
-          const res = await withRetry(
-            () =>
-              safeFetch(url, {
-                allowHosts: ALLOW_HOSTS,
-                timeoutMs: 5000,
-                signal,
-                fetchImpl: deps.fetchImpl,
-                headers,
-              }),
-            { retries: 1, baseMs: 200, shouldRetry: isTransient },
-          );
-          if (!res.ok) return [];
-          const data = (await res.json()) as KakaoResponse;
-          return (data.documents ?? [])
+          const data = await fetchJson<KakaoResponse>(url, {
+            allowHosts: ALLOW_HOSTS,
+            timeoutMs: 5000,
+            signal,
+            fetchImpl: deps.fetchImpl,
+            headers,
+          });
+          return (data?.documents ?? [])
             .map((doc) => toRawItem(doc, sourceType))
             .filter((x): x is RawItem => x !== null);
         }),
@@ -111,17 +106,7 @@ function toRawItem(doc: KakaoDocument, sourceType: SourceType): RawItem | null {
     title,
     url: doc.url,
     snippet: stripHtml(doc.contents ?? '') || undefined,
-    publishedAt: parseDate(doc.datetime),
+    publishedAt: toIsoDate(doc.datetime),
     sourceType,
   };
-}
-
-function parseDate(raw?: string): string | undefined {
-  if (!raw) return undefined;
-  const t = Date.parse(raw);
-  return Number.isNaN(t) ? undefined : new Date(t).toISOString();
-}
-
-function isTransient(error: unknown): boolean {
-  return error instanceof SafeFetchError && (error.code === 'NETWORK' || error.code === 'TIMEOUT');
 }
