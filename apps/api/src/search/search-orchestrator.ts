@@ -23,6 +23,9 @@ export interface SearchResult {
   cached: boolean;
 }
 
+/** 의미 있는 그래프의 최소 노드 수 = 중심(1) + 가지 1개 이상. 이하면 빈약 → 목업 폴백. */
+const MIN_MEANINGFUL_GRAPH_NODES = 2;
+
 /**
  * 수집→분석→그래프빌드→폴백 파이프라인(캐시 제외, 순수 코디네이션).
  * 한 어댑터 실패는 부분 결과로 흡수(collectAll), LLM 분석 실패는 휴리스틱 그래프로 폴백,
@@ -47,8 +50,8 @@ export async function buildSearchGraph(
     }
 
     const graph = buildGraphFromCollection(query, type, items, now, analysis);
-    // 수집 결과가 빈약하면 목업으로 폴백(데모 연속성)
-    return graph.nodes.length <= 1 ? buildMockGraph(query, type) : graph;
+    // 수집 결과가 빈약하면(중심 노드만) 목업으로 폴백(데모 연속성)
+    return graph.nodes.length < MIN_MEANINGFUL_GRAPH_NODES ? buildMockGraph(query, type) : graph;
   } catch (err) {
     logger?.error({ err }, '수집 실패 — 목업으로 폴백');
     return buildMockGraph(query, type);

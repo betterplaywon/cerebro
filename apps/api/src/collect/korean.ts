@@ -22,6 +22,11 @@ const RIEUL_JONGSEONG = 8;
 /** 어간 최소 길이(음절). 미만이면 절단하지 않는다(국가→국, 물가→물 방지). */
 const MIN_STEM_LENGTH = 2;
 
+/** 완성형 한글 음절 코드포인트 범위(U+AC00–U+D7A3)와 한 음절의 종성(받침) 종류 수. */
+const HANGUL_SYLLABLE_START = 0xac00;
+const HANGUL_SYLLABLE_END = 0xd7a3;
+const JONGSEONG_COUNT = 28;
+
 /**
  * 문자열 마지막 음절의 종성(받침) 인덱스를 돌려준다.
  *  - 0  = 받침 없음(모음 종결)
@@ -31,8 +36,8 @@ const MIN_STEM_LENGTH = 2;
  */
 export function lastJongseong(s: string): number | null {
   const code = s.charCodeAt(s.length - 1);
-  if (Number.isNaN(code) || code < 0xac00 || code > 0xd7a3) return null;
-  return (code - 0xac00) % 28;
+  if (Number.isNaN(code) || code < HANGUL_SYLLABLE_START || code > HANGUL_SYLLABLE_END) return null;
+  return (code - HANGUL_SYLLABLE_START) % JONGSEONG_COUNT;
 }
 
 /** 조사 후보. 긴 것부터 시도해 과분할을 막는다('으로'를 '로'보다 먼저). */
