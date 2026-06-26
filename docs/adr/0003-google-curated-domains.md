@@ -1,6 +1,6 @@
 # ADR-0003 — 구글 소스는 "엄선 도메인"으로 (무료 전체웹 검색 종료)
 
-- 상태: Accepted
+- 상태: Superseded by [ADR-0005](./0005-brave-search-replaces-google.md) (구글 JSON API가 신규 고객에 닫힘 → Brave로 대체)
 - 일자: 2026-06-26
 
 ## 맥락
