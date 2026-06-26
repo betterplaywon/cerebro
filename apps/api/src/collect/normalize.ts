@@ -12,6 +12,8 @@ export interface NormalizedItem {
 const STOPWORDS = new Set([
   '그리고', '관련', '대한', '대해', '관한', '소개', '정보', '및', '등', '수', '것', '때', '더',
   '이런', '그런', '저런', '있다', '없다', '하는', '에서', '으로',
+  // 보조용언·연결어미·시간 부사 등 의미 없는 빈출 토큰(실데이터 토픽 노이즈 제거)
+  '있는', '없는', '되는', '같은', '위한', '통해', '이번', '지난', '오는', '최근', '하지만', '또는',
   'the', 'a', 'an', 'of', 'and', 'or', 'to', 'for', 'in', 'on', 'with', 'is', 'are',
 ]);
 
@@ -37,7 +39,8 @@ export function tokenize(text: string): string[] {
   return text
     .toLowerCase()
     .split(/[^0-9a-z가-힣]+/i)
-    .filter((t) => t.length >= 2 && !STOPWORDS.has(t) && !/^\d+$/.test(t))
+    // 순수 숫자(039)와 날짜 조각(6월·26일)은 토픽 가치가 없어 제외(년도 '2020년'은 유지)
+    .filter((t) => t.length >= 2 && !STOPWORDS.has(t) && !/^\d+$/.test(t) && !/^\d+[월일]$/.test(t))
     .map(stripParticle)
     .filter((t) => t.length >= 2 && !STOPWORDS.has(t));
 }

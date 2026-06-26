@@ -19,6 +19,14 @@ describe('tokenize', () => {
     expect(tokenize('토스가 토스는 토스를')).toEqual(['토스', '토스', '토스']);
     expect(tokenize('대한민국의 역사')).toEqual(['대한민국', '역사']);
   });
+
+  it('보조용언·시간 부사 등 빈출 노이즈를 제거한다', () => {
+    expect(tokenize('토스가 있는 가장 최근 소식')).toEqual(['토스', '가장', '소식']);
+  });
+
+  it('날짜 조각(N월/N일)은 제외하되 연도(N년)는 유지한다', () => {
+    expect(tokenize('출시 6월 26일 2026년 업데이트')).toEqual(['출시', '2026년', '업데이트']);
+  });
 });
 
 describe('dedupeByUrl', () => {
