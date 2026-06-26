@@ -8,3 +8,4 @@
 | [0001](./0001-graph-contract-ssot.md) | 그래프 계약은 packages/shared가 SSOT | Accepted |
 | [0002](./0002-auth-deferred-to-m2.md) | 인증은 M2로 연기(MVP 익명) | Accepted |
 | [0003](./0003-google-curated-domains.md) | 구글 소스는 엄선 도메인(무료 전체웹 종료) | Accepted |
+| [0004](./0004-korean-josa-rule-tokenizer.md) | 한국어 조사 분리는 규칙 기반(형태소 분석기 보류) | Accepted |
