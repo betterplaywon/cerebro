@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { fetchJson } from '../lib/http.js';
 import { createRateLimiter } from '../lib/rate-limit.js';
 import { stripHtml } from '../lib/text.js';
@@ -28,15 +29,15 @@ const SEARCH_ENDPOINTS: readonly KakaoEndpoint[] = [
   { path: 'cafe', sourceType: 'community' },
 ];
 
-interface KakaoDocument {
-  title?: string;
-  contents?: string;
-  url?: string;
-  datetime?: string;
-}
-interface KakaoResponse {
-  documents?: KakaoDocument[];
-}
+/** 카카오 검색 API 응답(외부 경계 — zod 런타임 검증). 사용하는 필드만 선언, 나머지는 무시. */
+const KakaoDocumentSchema = z.object({
+  title: z.string().optional(),
+  contents: z.string().optional(),
+  url: z.string().optional(),
+  datetime: z.string().optional(),
+});
+const KakaoResponseSchema = z.object({ documents: z.array(KakaoDocumentSchema).optional() });
+type KakaoDocument = z.infer<typeof KakaoDocumentSchema>;
 
 export interface KakaoDeps {
   restApiKey?: string;
@@ -71,12 +72,13 @@ export function createKakaoAdapter(deps: KakaoDeps = {}): SourceAdapter {
           const url =
             `https://${KAKAO_HOST}/v2/search/${path}` +
             `?query=${encodeURIComponent(query)}&size=${size}`;
-          const data = await fetchJson<KakaoResponse>(url, {
+          const data = await fetchJson(url, {
             allowHosts: ALLOW_HOSTS,
             timeoutMs: 5000,
             signal,
             fetchImpl: deps.fetchImpl,
             headers,
+            schema: KakaoResponseSchema,
           });
           return (data?.documents ?? [])
             .map((doc) => toRawItem(doc, sourceType))

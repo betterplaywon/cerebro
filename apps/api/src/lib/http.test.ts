@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { fetchJson, isTransientFetchError, safeFetch, SafeFetchError } from './http.js';
 
 const ALLOW = ['ko.wikipedia.org'];
@@ -105,5 +106,25 @@ describe('fetchJson', () => {
     });
     expect(calls).toBe(2);
     expect(data).toEqual({ ok: 1 });
+  });
+
+  it('schema가 있으면 검증 통과 데이터를 반환한다', async () => {
+    const schema = z.object({ items: z.array(z.object({ id: z.number() })) });
+    const data = await fetchJson('https://ko.wikipedia.org/api', {
+      allowHosts: ALLOW,
+      fetchImpl: jsonFetch({ items: [{ id: 1 }] }),
+      schema,
+    });
+    expect(data).toEqual({ items: [{ id: 1 }] });
+  });
+
+  it('schema 검증 실패(외부 응답 형태 불일치)면 null', async () => {
+    const schema = z.object({ items: z.array(z.object({ id: z.number() })) });
+    const data = await fetchJson('https://ko.wikipedia.org/api', {
+      allowHosts: ALLOW,
+      fetchImpl: jsonFetch({ items: 'not-an-array' }), // 외부가 깨진 형태를 보내도 안전
+      schema,
+    });
+    expect(data).toBeNull();
   });
 });

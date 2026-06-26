@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { fetchJson } from '../lib/http.js';
 import { createRateLimiter } from '../lib/rate-limit.js';
 import { stripHtml } from '../lib/text.js';
@@ -7,15 +8,15 @@ const WIKI_HOST = 'ko.wikipedia.org';
 const ALLOW_HOSTS = [WIKI_HOST];
 const USER_AGENT = 'cerebro/0.1 (+https://github.com/betterplaywon/cerebro)';
 
-interface WikiSearchPage {
-  key?: string;
-  title?: string;
-  excerpt?: string;
-  description?: string;
-}
-interface WikiSearchResponse {
-  pages?: WikiSearchPage[];
-}
+/** 위키백과 REST 검색 응답(외부 경계 — zod 런타임 검증). 사용하는 필드만 선언, 나머지는 무시. */
+const WikiSearchPageSchema = z.object({
+  key: z.string().optional(),
+  title: z.string().optional(),
+  excerpt: z.string().optional(),
+  description: z.string().optional(),
+});
+const WikiSearchResponseSchema = z.object({ pages: z.array(WikiSearchPageSchema).optional() });
+type WikiSearchPage = z.infer<typeof WikiSearchPageSchema>;
 
 /**
  * 위키백과(한국어) 검색 어댑터 — 키 불필요·무료·ToS 친화(공개 REST API).
@@ -37,13 +38,14 @@ export function createWikipediaAdapter(deps: { fetchImpl?: typeof fetch } = {}):
         `https://${WIKI_HOST}/w/rest.php/v1/search/page` +
         `?q=${encodeURIComponent(query)}&limit=${clamp(limit, 1, 20)}`;
 
-      const data = await fetchJson<WikiSearchResponse>(url, {
+      const data = await fetchJson(url, {
         allowHosts: ALLOW_HOSTS,
         timeoutMs: 5000,
         signal,
         fetchImpl: deps.fetchImpl,
         headers: { accept: 'application/json', 'user-agent': USER_AGENT },
         retries: 2,
+        schema: WikiSearchResponseSchema,
       });
 
       const pages = data?.pages ?? [];

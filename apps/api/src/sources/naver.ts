@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { fetchJson } from '../lib/http.js';
 import { createRateLimiter } from '../lib/rate-limit.js';
 import { stripHtml } from '../lib/text.js';
@@ -33,15 +34,15 @@ const SEARCH_ENDPOINTS: readonly NaverEndpoint[] = [
   { path: 'kin', sourceType: 'community' },
 ];
 
-interface NaverItem {
-  title?: string;
-  link?: string;
-  description?: string;
-  pubDate?: string;
-}
-interface NaverResponse {
-  items?: NaverItem[];
-}
+/** 네이버 검색 API 응답(외부 경계 — zod 런타임 검증). 사용하는 필드만 선언, 나머지는 무시. */
+const NaverItemSchema = z.object({
+  title: z.string().optional(),
+  link: z.string().optional(),
+  description: z.string().optional(),
+  pubDate: z.string().optional(),
+});
+const NaverResponseSchema = z.object({ items: z.array(NaverItemSchema).optional() });
+type NaverItem = z.infer<typeof NaverItemSchema>;
 
 export interface NaverDeps {
   clientId?: string;
@@ -77,12 +78,13 @@ export function createNaverAdapter(deps: NaverDeps = {}): SourceAdapter {
           const url =
             `https://${NAVER_HOST}/v1/search/${path}.json` +
             `?query=${encodeURIComponent(query)}&display=${display}`;
-          const data = await fetchJson<NaverResponse>(url, {
+          const data = await fetchJson(url, {
             allowHosts: ALLOW_HOSTS,
             timeoutMs: 5000,
             signal,
             fetchImpl: deps.fetchImpl,
             headers,
+            schema: NaverResponseSchema,
           });
           return (data?.items ?? [])
             .map((item) => toRawItem(item, sourceType))
