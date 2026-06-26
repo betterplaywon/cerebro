@@ -1,54 +1,45 @@
-import { useQuery, type QueryStatus } from '@tanstack/react-query';
-import type { GraphSnapshot } from '@cerebro/shared';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import type { GraphSnapshot, SearchResponse } from '@cerebro/shared';
 import { searchQuery } from '../queries/search';
 import { useUrlSearchParam } from './useUrlSearchParam';
 
-export type SearchStatus = 'idle' | 'loading' | 'ready' | 'error';
+/**
+ * 검색 상태(판별 유니온). 불가능한 상태를 타입으로 차단한다:
+ * `ready`면 graph가, `error`면 error가 **항상 존재**한다 — 소비자가 `&& graph` 같은 보강을 할 필요 없다.
+ */
+export type SearchState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'error'; error: string }
+  | { status: 'ready'; graph: GraphSnapshot };
 
 export interface CerebroSearch {
-  status: SearchStatus;
-  graph: GraphSnapshot | null;
-  error: string | null;
-  /** 현재 검색어(URL `?q=`). 빈 문자열이면 미검색 */
-  query: string;
-  /** 검색 실행 — URL을 갱신하면 TanStack Query가 페칭·캐시·재시도를 담당 */
+  state: SearchState;
+  /** 검색 실행 — URL(`?q=`)을 갱신하면 TanStack Query가 페칭·캐시·재시도를 담당 */
   search: (query: string) => void;
 }
 
-/** react-query status → 앱 SearchStatus 매핑(객체 매핑 — 중첩 삼항 제거). */
-const SEARCH_STATUS_BY_QUERY_STATUS: Record<QueryStatus, SearchStatus> = {
-  pending: 'loading',
-  error: 'error',
-  success: 'ready',
-};
-
-/** 검색어 유무 + 쿼리 상태 → 표시 상태(단일 책임). */
-function deriveStatus(query: string, queryStatus: QueryStatus): SearchStatus {
-  if (query.trim().length === 0) return 'idle';
-  return SEARCH_STATUS_BY_QUERY_STATUS[queryStatus];
+/** react-query 결과 + 검색어 → 합성된 SearchState. 상태와 데이터의 상관관계를 여기서 한 번에 묶는다. */
+function toSearchState(query: string, result: UseQueryResult<SearchResponse>): SearchState {
+  if (query.trim().length === 0) return { status: 'idle' };
+  if (result.isError) return { status: 'error', error: toErrorMessage(result.error) };
+  if (result.isSuccess) return { status: 'ready', graph: result.data.graph };
+  return { status: 'loading' };
 }
 
-/** 쿼리 에러 → 사용자 메시지(없으면 null). */
-function toErrorMessage(error: unknown): string | null {
-  if (!error) return null;
+function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return '알 수 없는 오류가 발생했습니다';
 }
 
 /**
  * 검색 데이터 페칭 훅 — 서버상태(GraphSnapshot)는 TanStack Query, 검색어(클라이언트 상태)는 URL이
- * 단일 진실원이다(ARCHITECTURE §2.1). 서버/클라이언트 상태를 분리하고, 쿼리 정의는 query-factory
- * (`searchQuery`)가 소유한다. 이 훅의 책임은 둘을 잇고 표시 상태로 정규화하는 것뿐(SRP).
+ * 단일 진실원이다(ARCHITECTURE §2.1). 상태·데이터 **합성은 이 훅에서** 끝내고, 컴포넌트는 합성된
+ * SearchState를 그대로 소비한다(관심사 분리·SRP).
  */
 export function useCerebroSearch(): CerebroSearch {
   const [query, search] = useUrlSearchParam('q');
   const result = useQuery(searchQuery(query));
 
-  return {
-    status: deriveStatus(query, result.status),
-    graph: result.data?.graph ?? null,
-    error: toErrorMessage(result.error),
-    query,
-    search,
-  };
+  return { state: toSearchState(query, result), search };
 }
