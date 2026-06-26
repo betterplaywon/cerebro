@@ -1,15 +1,22 @@
 import type { NodeKind } from '@cerebro/shared';
 
-/** 노드 카테고리 색 (DESIGN-SYSTEM 카테고리 팔레트와 정합). */
+/**
+ * 노드 카테고리 색 — DESIGN-SYSTEM §1.4 SSOT와 1:1 (이 맵이 3D/2D 단일 출처, ADR-0006).
+ * 주의(의도된 결정, 임의 변경 금지):
+ *  - 채널=핑크(#FF8FB1) / 평판=초록(#3FD68A) — 이전 코드의 의미(채널=청록/평판=핑크)를 SSOT 기준으로 교정(swap).
+ *  - 평판(#3FD68A)=의미색 success, 뉴스(#F2B847)=의미색 warning과 색상 충돌은 SSOT가 의도한 것 —
+ *    카테고리는 색만이 아니라 **아이콘+라벨**로 식별하므로 안전(WCAG AA, 색맹 대응).
+ *  - concept(#8AA0FF)는 SSOT 미정의 → person(보라)과 구분되는 청보라로 등록(ADR-0006).
+ */
 export const NODE_COLORS: Record<NodeKind, string> = {
-  center: '#7cf6ff',
-  product: '#6ea8ff',
-  news: '#ffd166',
-  person: '#b794f6',
-  channel: '#4fd1c5',
-  reputation: '#f6739b',
-  concept: '#9aa7ff',
-  attribute: '#8a93a6',
+  center: '#37E0D8',
+  product: '#5BD1FF',
+  news: '#F2B847',
+  person: '#A98BFF',
+  channel: '#FF8FB1',
+  reputation: '#3FD68A',
+  concept: '#8AA0FF',
+  attribute: '#8A93A8',
 };
 
 /** 노드 유형의 한국어 라벨 */

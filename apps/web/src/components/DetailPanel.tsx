@@ -1,6 +1,8 @@
+import type { CSSProperties } from 'react';
 import type { GraphNode, GraphSnapshot } from '@cerebro/shared';
-import { NODE_KIND_LABELS, NODE_USAGE_HINTS } from '../lib/colors';
+import { NODE_COLORS, NODE_KIND_LABELS, NODE_USAGE_HINTS } from '../lib/colors';
 import { SOURCE_TYPE_LABELS } from '../lib/sources';
+import { CategoryIcon } from './CategoryIcon';
 
 interface DetailPanelProps {
   node: GraphNode;
@@ -26,7 +28,14 @@ export function DetailPanel({ node, graph, onClose }: DetailPanelProps) {
       <dl className="detail-panel__meta">
         <div>
           <dt>유형</dt>
-          <dd>{NODE_KIND_LABELS[node.kind]}</dd>
+          <dd>
+            <span className="cat-badge" style={{ '--cat': NODE_COLORS[node.kind] } as CSSProperties}>
+              <span className="cat-badge__icon">
+                <CategoryIcon kind={node.kind} size={13} />
+              </span>
+              {NODE_KIND_LABELS[node.kind]}
+            </span>
+          </dd>
         </div>
         <div>
           <dt>신뢰도</dt>
