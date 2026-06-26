@@ -3,6 +3,7 @@
 > **새 세션은 이 문서부터 읽으세요.** 어디까지 했고 다음에 뭘 할지의 단일 기준점.
 > 최종 갱신: 2026-06-26 · 구글 JSON API 신규고객 영구차단 + 무료 웹검색 API 유료화 → **광범위 웹검색 보류, 네이버+위키 2소스로 출시**(ADR-0005).
 > · 소셜/커뮤니티 검증 → **국내 커뮤니티(네이버 blog/cafe/kin + 카카오 web/blog/cafe) 공식 API로 도입, SNS(X·인스타·페북) 보류**(ADR-0007).
+> · **활용 관점 리포트**: 수집 정보를 Claude(Sonnet 4.6)로 정제해 "핵심 요약 + 관점별 활용법(투자/취업/경제…)"을 자식 노드로 제공(ADR-0008). 키 미설정 시 휴리스틱 그래프로 폴백(지출 0).
 
 ## TL;DR
 기반(문서·8에이전트·모노레포·CI)과 **M1 하이브리드 검색**까지 완료·머지됨. `/api/search`가 **위키백과+네이버**의 실제 공개정보를 수집·정제해 중심-가지 그래프로 반환하고, 프론트(Vite+R3F)가 3D 마인드맵으로 그린다. **구글 Custom Search JSON API는 신규 고객에 영구 차단됨**(공식 — 콘솔은 Enabled여도 호출 시 403). 대체로 검토한 **Brave도 2026-02 무료 폐지(카드 필수)**, Tavily만 무료 1,000건 남음. 보조 웹검색에 카드·과금을 떠안는 건 YAGNI → **지금은 광범위 웹검색을 보류하고 네이버+위키 2소스로 출시**(ADR-0005). 재도입은 트래픽 확인 후(1순위 Tavily).
@@ -10,7 +11,11 @@
 ---
 
 ## 1. 지금 동작하는 것
-- **검색 → 세레브로 로딩 → 3D 마인드맵 → 노드 상세(출처·신뢰도·활용법)** 핵심 루프 동작.
+- **검색 → 세레브로 로딩 → 3D 마인드맵 → 노드 상세(요약·활용 리포트·출처)** 핵심 루프 동작.
+- **활용 관점 리포트(ADR-0008)**: 키(`ANTHROPIC_API_KEY`) 설정 시 검색당 1회 Claude(Sonnet 4.6) 호출 →
+  중심 노드=핵심 정보 요약, 자식 `usage` 노드=관점별(투자/취업/경제/사회/건강/관계/쇼핑/도서/콘텐츠 중
+  해당되는 것만) 상세 리포트. 상세 패널이 `report`를 문단으로 렌더. **키 없으면 휴리스틱(카테고리/토픽)
+  그래프로 폴백(지출 0)**. 캐시(30분)로 동일 쿼리 재요청 추가 지출 0.
 - **출처 투명성**: 그래프 하단 "분석된 출처 N건" + 유형별 한글 배지(네이버·위키백과…), 상세 패널 출처 유형 한글 표기.
 - 하이브리드 수집(병렬, 일부 실패 허용) + 캐시(30분) + 빈약 시 mock 폴백.
 - 라이브 검증됨: `"토스"` → 출처 19건(**위키 8 + 네이버 11**), 재요청 `cached=true`.
@@ -30,7 +35,8 @@ apps/api (Fastify)
   src/server.ts            POST /api/search (zod 검증·캐시·폴백·계약보증), GET /health
   src/collect/             normalize · dedup · score(토픽) · pii(민감정보 마스킹) · orchestrator(allSettled)
   src/sources/             types(RawItem.sourceType 오버라이드) · registry · wikipedia · naver(webkr/news/blog/cafe/kin) · kakao(web/blog/cafe) · example(테스트 fixture)
-  src/graph/build.ts       수집→GraphSnapshot(중심+토픽)
+  src/analyze/report.ts    LLM 활용 관점 분석(Claude Sonnet 4.6, 키 게이트·폴백·PIPA 가드, ADR-0008)
+  src/graph/build.ts       수집→GraphSnapshot(분석 있으면 중심+활용관점 / 없으면 중심+카테고리/토픽)
   src/lib/                 http(SSRF-safe fetch) · rate-limit · cache(TTL+LRU) · text(stripHtml)
   src/env.ts               zod 환경검증(옵셔널 키=빈값→비활성)
 packages/shared            zod 계약 SSOT (Graph/Source/Subject/Search 스키마)  ← 계약 변경은 여기 먼저
@@ -44,7 +50,9 @@ pnpm install
 pnpm dev                 # web :5173 + api :8787
 pnpm typecheck && pnpm test && pnpm lint && pnpm build   # 전체 게이트 (현재 그린, 테스트 150+개)
 ```
-- 키는 `apps/api/.env`(**gitignore됨**, 커밋 금지)에 있음: 네이버(작동). 값은 절대 출력/커밋 금지.
+- 키는 `apps/api/.env`(**gitignore됨**, 커밋 금지)에 있음: 네이버·카카오·Anthropic(작동). 값은 절대 출력/커밋 금지.
+- **활용 리포트 비용 관리**: `ANTHROPIC_API_KEY`가 있으면 검색당 1회 Claude 호출(검색당 ~$0.03~0.05, 캐시 재요청은 0).
+  지출 차단이 필요하면 `.env`에서 키를 빼면 자동으로 휴리스틱 폴백(0원). 예산 $8.8 ≈ 175~290 고유 검색(ADR-0008).
 
 ## 4. 🟢 현재 출시 구성 = 네이버 + 위키백과 (웹검색 보류)
 > 광범위 웹검색은 보류했다(무료 티어 멸종, ADR-0005). 구글=영구차단, Brave=2026-02 무료폐지+카드필수, Tavily만 무료 1k. 핵심 루프(중심-가지 마인드맵)는 네이버+위키 2소스로 충분히 성립한다.
@@ -69,6 +77,8 @@ curl -s localhost:8787/api/search -X POST -H 'content-type: application/json' -d
 6. ROADMAP의 M1 잔여 항목.
 7. ~~**국내 커뮤니티 소스**: 디시 등 직접 크롤링은 ToS·robots 위반 → 불가.~~ ✅ 완료(`feat/korean-community-sources`, ADR-0007): 네이버 blog/cafe/kin 확장 + 카카오(다음) web/blog/cafe 어댑터 + 항목별 출처유형 배지 + PIPA 민감정보 마스킹. **카카오 키 입력 시 활성**(`KAKAO_REST_API_KEY`).
 8. **YouTube 소스**(선택): Data API v3, 무료(키 필요). 영상 커버리지. SNS 중 유일하게 무료·합법 — 다음 무료 소스 1순위 후보(ADR-0007).
+9. ~~**활용 관점 리포트**: 출처 요약 + 관점별(투자/취업/경제…) 활용법을 리포트처럼.~~ ✅ 완료(`feat/llm-usage-report`, ADR-0008): Claude Sonnet 4.6로 검색당 1회 분석 → 중심=요약, 자식 `usage` 노드=관점별 리포트. 키 게이트·30분 캐시·18건 상한으로 비용 통제, 키 없으면 휴리스틱 폴백.
+   - **후속 후보**: LLM 사용량/비용 메트릭 + 자동 상한(예산 소진 시 자동 차단), 활용 리포트 캐시 품질 모니터링.
 
 ## 6. 알려진 한계
 - 한국어 토큰화: 조사 분리는 규칙 기반(ADR-0004)으로 개선됨. 잔여 한계 — 보호 단어 사전은 비완전(신규 `~家`/`~이`/`주의`어 오탐 가능), 복합명사 분해·품사 필터 없음(필요 시 kiwi-nlp 재검토).
