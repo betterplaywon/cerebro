@@ -10,6 +10,7 @@ import {
 import { tokenize, type NormalizedItem } from '../collect/normalize.js';
 import { extractTopics } from '../collect/score.js';
 import { classifySource } from './category-rules.js';
+import type { UsageReport } from '../analyze/report.js';
 
 /** 색이 입혀지는 카테고리 가지(중심·concept·attribute 제외). emit 순서 = 표시 우선순위. */
 const CATEGORY_KINDS = ['product', 'news', 'reputation', 'channel', 'person'] as const;
@@ -39,8 +40,15 @@ export function buildGraphFromCollection(
   subjectType: SubjectType | undefined,
   items: NormalizedItem[],
   generatedAt: string,
+  analysis?: UsageReport | null,
 ): GraphSnapshot {
   const sources: Source[] = items.map((i) => i.source);
+
+  // LLM 분석이 있으면 활용 관점(usage) 노드 그래프를 만든다(ADR-0008).
+  // 없으면(키 미설정/실패) 아래 휴리스틱(카테고리+토픽) 그래프로 폴백한다.
+  if (analysis && analysis.angles.length > 0) {
+    return buildUsageGraph(query, subjectType, sources, analysis, generatedAt);
+  }
 
   const center: GraphNode = {
     id: 'center',
@@ -68,6 +76,67 @@ export function buildGraphFromCollection(
   return {
     subject: { id: 'subject-1', query, type: subjectType ?? 'unknown', displayName: query },
     nodes: [center, ...branchNodes],
+    edges,
+    sources,
+    generatedAt,
+  };
+}
+
+/** 활용 관점 노드당 표시할 근거 출처 최대 수(상세 패널 가독성). */
+const MAX_ANGLE_SOURCES = 6;
+
+/**
+ * LLM 분석(요약 + 관점별 리포트)으로 중심-활용관점 그래프를 만든다.
+ * 중심 노드 = 핵심 정보 요약(report), 가지 = 활용 관점(투자/취업/…) 노드(각자 상세 리포트).
+ */
+function buildUsageGraph(
+  query: string,
+  subjectType: SubjectType | undefined,
+  sources: Source[],
+  analysis: UsageReport,
+  generatedAt: string,
+): GraphSnapshot {
+  const sourceById = new Map(sources.map((s) => [s.id, s]));
+
+  const center: GraphNode = {
+    id: 'center',
+    label: query,
+    kind: 'center',
+    summary: `'${query}' 공개정보 분석`,
+    report: analysis.summary,
+    importance: 1,
+    confidence: 0.9,
+    sourceIds: sources.slice(0, 3).map((s) => s.id),
+  };
+
+  const angleNodes: GraphNode[] = analysis.angles.slice(0, MAX_BRANCHES).map((angle, i) => {
+    const cited = angle.sourceIds.filter((id) => sourceById.has(id));
+    const confidence = cited.length
+      ? round2(mean(cited.map((id) => sourceById.get(id)!.confidence)))
+      : 0.55;
+    return {
+      id: `usage-${angle.key}`,
+      label: angle.label,
+      kind: 'usage',
+      summary: angle.hook,
+      report: angle.report,
+      importance: round2(clamp(0.85 - i * 0.04, 0.5, 0.85)),
+      confidence,
+      sourceIds: cited.slice(0, MAX_ANGLE_SOURCES),
+    };
+  });
+
+  const edges: GraphEdge[] = angleNodes.map((node) => ({
+    id: `e-center-${node.id}`,
+    source: 'center',
+    target: node.id,
+    relation: '활용',
+    weight: round2(node.importance),
+  }));
+
+  return {
+    subject: { id: 'subject-1', query, type: subjectType ?? 'unknown', displayName: query },
+    nodes: [center, ...angleNodes],
     edges,
     sources,
     generatedAt,

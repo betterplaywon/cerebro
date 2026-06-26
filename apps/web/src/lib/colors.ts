@@ -17,6 +17,7 @@ export const NODE_COLORS: Record<NodeKind, string> = {
   reputation: '#3FD68A',
   concept: '#8AA0FF',
   attribute: '#8A93A8',
+  usage: '#FF9F5A',
 };
 
 /** 노드 유형의 한국어 라벨 */
@@ -29,6 +30,7 @@ export const NODE_KIND_LABELS: Record<NodeKind, string> = {
   reputation: '평판·리뷰',
   concept: '관련 개념',
   attribute: '속성',
+  usage: '활용 관점',
 };
 
 /** 노드 유형별 "정보 활용 방법" 안내 */
@@ -41,4 +43,5 @@ export const NODE_USAGE_HINTS: Record<NodeKind, string> = {
   reputation: '평판·리뷰 신호입니다. 사용자 인식과 강·약점 파악에 활용하세요.',
   concept: '연관 키워드입니다. 탐색 범위를 넓히는 단서로 활용하세요.',
   attribute: '세부 속성·사실입니다. 근거 확인과 비교에 활용하세요.',
+  usage: '수집 정보를 이 관점에서 어떻게 활용할지 분석한 리포트입니다.',
 };

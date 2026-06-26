@@ -43,8 +43,22 @@ export function DetailPanel({ node, graph, onClose }: DetailPanelProps) {
         </div>
       </dl>
 
+      {node.report ? (
+        <section className="detail-panel__section detail-panel__report">
+          <h3>{node.kind === 'center' ? '핵심 정보 요약' : '정보 활용 방법'}</h3>
+          {reportParagraphs(node.report).map((para, i) => (
+            <p key={`${node.id}-para-${i}`}>{para}</p>
+          ))}
+        </section>
+      ) : (
+        <section className="detail-panel__section">
+          <h3>정보 활용 방법</h3>
+          <p>{NODE_USAGE_HINTS[node.kind]}</p>
+        </section>
+      )}
+
       <section className="detail-panel__section">
-        <h3>출처</h3>
+        <h3>{node.report ? '근거 출처' : '출처'}</h3>
         {sources.length === 0 ? (
           <p className="muted">등록된 출처가 없습니다.</p>
         ) : (
@@ -63,11 +77,14 @@ export function DetailPanel({ node, graph, onClose }: DetailPanelProps) {
           </ul>
         )}
       </section>
-
-      <section className="detail-panel__section">
-        <h3>정보 활용 방법</h3>
-        <p>{NODE_USAGE_HINTS[node.kind]}</p>
-      </section>
     </aside>
   );
+}
+
+/** 리포트 본문을 문단 배열로 분해(줄바꿈 기준, 빈 줄 제거). */
+function reportParagraphs(report: string): string[] {
+  return report
+    .split(/\n+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
 }

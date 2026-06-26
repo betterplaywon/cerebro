@@ -16,6 +16,7 @@ export const NODE_KINDS = [
   'reputation', // 평판/리뷰/감성
   'concept', // 관련 개념/키워드
   'attribute', // 속성/사실
+  'usage', // 정보 활용 관점(투자/취업/경제…) — LLM 분석 리포트 노드
 ] as const;
 
 /** 정보 출처의 유형 */
