@@ -1,5 +1,5 @@
-import { safeFetch, SafeFetchError } from '../lib/http.js';
-import { createRateLimiter, withRetry } from '../lib/rate-limit.js';
+import { fetchJson } from '../lib/http.js';
+import { createRateLimiter } from '../lib/rate-limit.js';
 import { stripHtml } from '../lib/text.js';
 import type { CollectContext, RawItem, SourceAdapter } from './types.js';
 
@@ -37,22 +37,16 @@ export function createWikipediaAdapter(deps: { fetchImpl?: typeof fetch } = {}):
         `https://${WIKI_HOST}/w/rest.php/v1/search/page` +
         `?q=${encodeURIComponent(query)}&limit=${clamp(limit, 1, 20)}`;
 
-      const res = await withRetry(
-        () =>
-          safeFetch(url, {
-            allowHosts: ALLOW_HOSTS,
-            timeoutMs: 5000,
-            signal,
-            fetchImpl: deps.fetchImpl,
-            headers: { accept: 'application/json', 'user-agent': USER_AGENT },
-          }),
-        { retries: 2, baseMs: 200, shouldRetry: isTransient },
-      );
+      const data = await fetchJson<WikiSearchResponse>(url, {
+        allowHosts: ALLOW_HOSTS,
+        timeoutMs: 5000,
+        signal,
+        fetchImpl: deps.fetchImpl,
+        headers: { accept: 'application/json', 'user-agent': USER_AGENT },
+        retries: 2,
+      });
 
-      if (!res.ok) return [];
-
-      const data = (await res.json()) as WikiSearchResponse;
-      const pages = data.pages ?? [];
+      const pages = data?.pages ?? [];
 
       return pages
         .filter((p): p is WikiSearchPage & { title: string } => typeof p.title === 'string' && p.title.length > 0)
@@ -66,10 +60,6 @@ export function createWikipediaAdapter(deps: { fetchImpl?: typeof fetch } = {}):
 }
 
 export const wikipediaAdapter = createWikipediaAdapter();
-
-function isTransient(error: unknown): boolean {
-  return error instanceof SafeFetchError && (error.code === 'NETWORK' || error.code === 'TIMEOUT');
-}
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));

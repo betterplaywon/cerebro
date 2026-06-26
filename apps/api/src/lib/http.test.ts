@@ -1,10 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import { safeFetch, SafeFetchError } from './http.js';
+import { fetchJson, isTransientFetchError, safeFetch, SafeFetchError } from './http.js';
 
 const ALLOW = ['ko.wikipedia.org'];
 
 function okFetch() {
   return vi.fn(async () => new Response('{}', { status: 200 }));
+}
+
+function jsonFetch(body: unknown, status = 200) {
+  return vi.fn(async () => new Response(JSON.stringify(body), { status }));
 }
 
 describe('safeFetch SSRF 가드', () => {
@@ -58,5 +62,48 @@ describe('safeFetch SSRF 가드', () => {
     await expect(
       safeFetch('ftp://ko.wikipedia.org', { allowHosts: ALLOW, fetchImpl: okFetch() }),
     ).rejects.toBeInstanceOf(SafeFetchError);
+  });
+});
+
+describe('isTransientFetchError', () => {
+  it('네트워크/타임아웃 오류만 일시적으로 본다', () => {
+    expect(isTransientFetchError(new SafeFetchError('x', 'NETWORK'))).toBe(true);
+    expect(isTransientFetchError(new SafeFetchError('x', 'TIMEOUT'))).toBe(true);
+    expect(isTransientFetchError(new SafeFetchError('x', 'HOST_NOT_ALLOWED'))).toBe(false);
+    expect(isTransientFetchError(new Error('x'))).toBe(false);
+  });
+});
+
+describe('fetchJson', () => {
+  it('200 응답을 파싱해 반환한다', async () => {
+    const f = jsonFetch({ ok: 1 });
+    const data = await fetchJson<{ ok: number }>('https://ko.wikipedia.org/api', {
+      allowHosts: ALLOW,
+      fetchImpl: f,
+    });
+    expect(data).toEqual({ ok: 1 });
+  });
+
+  it('비정상 응답(5xx)이면 null을 반환한다', async () => {
+    const f = jsonFetch({}, 503);
+    const data = await fetchJson('https://ko.wikipedia.org/api', { allowHosts: ALLOW, fetchImpl: f });
+    expect(data).toBeNull();
+  });
+
+  it('일시적 네트워크 오류는 재시도한 뒤 성공한다', async () => {
+    let calls = 0;
+    const f = vi.fn(async () => {
+      calls += 1;
+      if (calls === 1) throw new Error('boom'); // safeFetch가 NETWORK 오류로 감싼다 → 재시도
+      return new Response(JSON.stringify({ ok: 1 }), { status: 200 });
+    });
+    const data = await fetchJson<{ ok: number }>('https://ko.wikipedia.org/api', {
+      allowHosts: ALLOW,
+      fetchImpl: f as unknown as typeof fetch,
+      retries: 1,
+      retryBaseMs: 1,
+    });
+    expect(calls).toBe(2);
+    expect(data).toEqual({ ok: 1 });
   });
 });

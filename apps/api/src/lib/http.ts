@@ -4,6 +4,8 @@
  * (정규 URL을 쓰는 어댑터 전제 — 리다이렉트는 막아 내부망 우회를 차단)
  */
 
+import { withRetry } from './rate-limit.js';
+
 export type SafeFetchErrorCode =
   | 'SCHEME'
   | 'IP_LITERAL'
@@ -100,4 +102,32 @@ export async function safeFetch(rawUrl: string, opts: SafeFetchOptions): Promise
     throw new SafeFetchError('리다이렉트가 차단되었습니다(정규 URL을 사용하세요)', 'REDIRECT_BLOCKED');
   }
   return res;
+}
+
+/** 일시적(재시도 가능) fetch 오류인지 — 네트워크/타임아웃만. 어댑터 재시도 조건 공용. */
+export function isTransientFetchError(error: unknown): boolean {
+  return error instanceof SafeFetchError && (error.code === 'NETWORK' || error.code === 'TIMEOUT');
+}
+
+export interface FetchJsonOptions extends SafeFetchOptions {
+  /** 일시적 오류 재시도 횟수(기본 1) */
+  retries?: number;
+  /** 백오프 기준 ms(기본 200) */
+  retryBaseMs?: number;
+}
+
+/**
+ * SSRF-안전 GET + 일시적 오류 지수 백오프 재시도 + JSON 파싱을 한 번에.
+ * 비정상 응답(!res.ok)은 null을 반환한다(어댑터가 빈 결과로 처리). 네트워크 오류는 throw.
+ * 소스 어댑터(naver/kakao/wikipedia)가 공유하는 수집 보일러플레이트를 한 곳으로 모은다.
+ */
+export async function fetchJson<T>(url: string, opts: FetchJsonOptions): Promise<T | null> {
+  const { retries = 1, retryBaseMs = 200, ...fetchOpts } = opts;
+  const res = await withRetry(() => safeFetch(url, fetchOpts), {
+    retries,
+    baseMs: retryBaseMs,
+    shouldRetry: isTransientFetchError,
+  });
+  if (!res.ok) return null;
+  return (await res.json()) as T;
 }

@@ -1,6 +1,7 @@
-import { safeFetch, SafeFetchError } from '../lib/http.js';
-import { createRateLimiter, withRetry } from '../lib/rate-limit.js';
+import { fetchJson } from '../lib/http.js';
+import { createRateLimiter } from '../lib/rate-limit.js';
 import { stripHtml } from '../lib/text.js';
+import { toIsoDate } from '../lib/dates.js';
 import { env } from '../env.js';
 import type { SourceType } from '@cerebro/shared';
 import type { CollectContext, RawItem, SourceAdapter } from './types.js';
@@ -76,20 +77,14 @@ export function createNaverAdapter(deps: NaverDeps = {}): SourceAdapter {
           const url =
             `https://${NAVER_HOST}/v1/search/${path}.json` +
             `?query=${encodeURIComponent(query)}&display=${display}`;
-          const res = await withRetry(
-            () =>
-              safeFetch(url, {
-                allowHosts: ALLOW_HOSTS,
-                timeoutMs: 5000,
-                signal,
-                fetchImpl: deps.fetchImpl,
-                headers,
-              }),
-            { retries: 1, baseMs: 200, shouldRetry: isTransient },
-          );
-          if (!res.ok) return [];
-          const data = (await res.json()) as NaverResponse;
-          return (data.items ?? [])
+          const data = await fetchJson<NaverResponse>(url, {
+            allowHosts: ALLOW_HOSTS,
+            timeoutMs: 5000,
+            signal,
+            fetchImpl: deps.fetchImpl,
+            headers,
+          });
+          return (data?.items ?? [])
             .map((item) => toRawItem(item, sourceType))
             .filter((x): x is RawItem => x !== null);
         }),
@@ -116,17 +111,7 @@ function toRawItem(item: NaverItem, sourceType: SourceType | undefined): RawItem
     title: stripHtml(item.title),
     url: item.link,
     snippet: stripHtml(item.description ?? '') || undefined,
-    publishedAt: parseDate(item.pubDate),
+    publishedAt: toIsoDate(item.pubDate),
     sourceType,
   };
-}
-
-function parseDate(raw?: string): string | undefined {
-  if (!raw) return undefined;
-  const t = Date.parse(raw);
-  return Number.isNaN(t) ? undefined : new Date(t).toISOString();
-}
-
-function isTransient(error: unknown): boolean {
-  return error instanceof SafeFetchError && (error.code === 'NETWORK' || error.code === 'TIMEOUT');
 }
