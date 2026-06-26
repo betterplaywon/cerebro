@@ -33,6 +33,8 @@ describe('useCerebroSearch', () => {
     window.history.replaceState(null, '', '/?q=토스');
     const { result } = renderHook(() => useCerebroSearch(), { wrapper: withQueryClient() });
 
+    // 확정 검색어(query)는 URL을 그대로 반영한다(입력칸 초기값 등 표시용).
+    expect(result.current.query).toBe('토스');
     await waitFor(() => expect(result.current.state.status).toBe('ready'));
   });
 

@@ -8,13 +8,13 @@ import { MindMapView } from './components/MindMapView';
  * 상태·데이터 합성은 useCerebroSearch가 끝내고(ready면 graph 보장), App은 합성 데이터를 소비만 한다(SRP).
  */
 export default function App() {
-  const { state, search } = useCerebroSearch();
+  const { state, query, search } = useCerebroSearch();
 
   return (
     <div className="app">
       <header className="app__header">
         <h1 className="app__brand">cerebro</h1>
-        <SearchBar onSearch={search} disabled={state.status === 'loading'} />
+        <SearchBar initialQuery={query} onSearch={search} disabled={state.status === 'loading'} />
       </header>
 
       <main className="app__main">
