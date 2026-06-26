@@ -1,12 +1,15 @@
 import { useState, type FormEvent } from 'react';
 
 interface SearchBarProps {
+  /** 확정 검색어(URL) — 입력 드래프트의 초기값. 딥링크(`?q=`) 진입 시 입력칸을 채운다. */
+  initialQuery?: string;
   onSearch: (query: string) => void;
   disabled?: boolean;
 }
 
-export function SearchBar({ onSearch, disabled = false }: SearchBarProps) {
-  const [value, setValue] = useState('');
+export function SearchBar({ initialQuery = '', onSearch, disabled = false }: SearchBarProps) {
+  // 입력 드래프트는 컴포넌트 로컬 상태(미확정 타이핑). 확정 검색어(서버상태 트리거)는 URL이 담당.
+  const [value, setValue] = useState(initialQuery);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();

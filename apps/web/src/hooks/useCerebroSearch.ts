@@ -15,6 +15,8 @@ export type SearchState =
 
 export interface CerebroSearch {
   state: SearchState;
+  /** 현재 확정 검색어(URL `?q=`). 딥링크 시 입력칸 초기값 등 표시용. */
+  query: string;
   /** 검색 실행 — URL(`?q=`)을 갱신하면 TanStack Query가 페칭·캐시·재시도를 담당 */
   search: (query: string) => void;
 }
@@ -41,5 +43,5 @@ export function useCerebroSearch(): CerebroSearch {
   const [query, search] = useUrlSearchParam('q');
   const result = useQuery(searchQuery(query));
 
-  return { state: toSearchState(query, result), search };
+  return { state: toSearchState(query, result), query, search };
 }
