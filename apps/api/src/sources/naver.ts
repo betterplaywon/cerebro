@@ -2,12 +2,35 @@ import { safeFetch, SafeFetchError } from '../lib/http.js';
 import { createRateLimiter, withRetry } from '../lib/rate-limit.js';
 import { stripHtml } from '../lib/text.js';
 import { env } from '../env.js';
+import type { SourceType } from '@cerebro/shared';
 import type { CollectContext, RawItem, SourceAdapter } from './types.js';
 
 const NAVER_HOST = 'openapi.naver.com';
 const ALLOW_HOSTS = [NAVER_HOST];
-/** 사용할 검색 종류(웹문서 + 뉴스). 필요 시 blog/encyc/local 등 추가 가능. */
-const SEARCH_TYPES = ['webkr', 'news'] as const;
+
+interface NaverEndpoint {
+  /** 네이버 검색 API 경로(/v1/search/{path}.json) */
+  readonly path: string;
+  /** 항목별 출처 유형. 생략 시 어댑터 기본('naver'). */
+  readonly sourceType?: SourceType;
+}
+
+/**
+ * 수집할 네이버 검색 엔드포인트와 출처 유형 매핑.
+ * webkr/news 는 기본 유형(naver), blog/cafe/kin 은 유형 배지로 구분(출처 투명성).
+ * 모두 동일 키·호스트·헤더·ToS(공식 공개 API) → 통합/법적 리스크 최소.
+ *
+ * 주의: 네이버 일일 호출 쿼터(25,000/일)는 전 엔드포인트 공유 →
+ * 엔드포인트 수만큼 쿼리당 호출이 늘어난다. 30분 캐시로 완화하며,
+ * 트래픽 증가 시 활성 엔드포인트 제한을 검토한다(현재는 YAGNI).
+ */
+const SEARCH_ENDPOINTS: readonly NaverEndpoint[] = [
+  { path: 'webkr' },
+  { path: 'news' },
+  { path: 'blog', sourceType: 'blog' },
+  { path: 'cafearticle', sourceType: 'community' },
+  { path: 'kin', sourceType: 'community' },
+];
 
 interface NaverItem {
   title?: string;
@@ -48,10 +71,10 @@ export function createNaverAdapter(deps: NaverDeps = {}): SourceAdapter {
       const display = Math.max(1, Math.min(20, limit));
 
       const perType = await Promise.allSettled(
-        SEARCH_TYPES.map(async (type) => {
+        SEARCH_ENDPOINTS.map(async ({ path, sourceType }) => {
           await limiter.acquire();
           const url =
-            `https://${NAVER_HOST}/v1/search/${type}.json` +
+            `https://${NAVER_HOST}/v1/search/${path}.json` +
             `?query=${encodeURIComponent(query)}&display=${display}`;
           const res = await withRetry(
             () =>
@@ -66,7 +89,9 @@ export function createNaverAdapter(deps: NaverDeps = {}): SourceAdapter {
           );
           if (!res.ok) return [];
           const data = (await res.json()) as NaverResponse;
-          return (data.items ?? []).map(toRawItem).filter((x): x is RawItem => x !== null);
+          return (data.items ?? [])
+            .map((item) => toRawItem(item, sourceType))
+            .filter((x): x is RawItem => x !== null);
         }),
       );
 
@@ -80,7 +105,7 @@ export const naverAdapter = createNaverAdapter({
   clientSecret: env.NAVER_CLIENT_SECRET,
 });
 
-function toRawItem(item: NaverItem): RawItem | null {
+function toRawItem(item: NaverItem, sourceType: SourceType | undefined): RawItem | null {
   if (!item.link || !item.title) return null;
   try {
     new URL(item.link);
@@ -92,6 +117,7 @@ function toRawItem(item: NaverItem): RawItem | null {
     url: item.link,
     snippet: stripHtml(item.description ?? '') || undefined,
     publishedAt: parseDate(item.pubDate),
+    sourceType,
   };
 }
 

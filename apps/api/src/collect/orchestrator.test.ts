@@ -33,6 +33,24 @@ describe('collectAll', () => {
     expect(res.items[0]?.source.url).toBe('https://e.com/ok');
   });
 
+  it('항목별 sourceType이 어댑터 기본 유형을 오버라이드한다', async () => {
+    const multi: SourceAdapter = {
+      id: 'multi',
+      sourceType: 'naver',
+      requiresKey: false,
+      isEnabled: () => true,
+      collect: () =>
+        Promise.resolve([
+          { title: 'A', url: 'https://e.com/a', sourceType: 'community' },
+          { title: 'B', url: 'https://e.com/b' }, // 오버라이드 없음 → 어댑터 기본(naver)
+        ]),
+    };
+    const res = await collectAll('q', undefined, NOW, [multi]);
+    const byUrl = Object.fromEntries(res.items.map((i) => [i.source.url, i.source.type]));
+    expect(byUrl['https://e.com/a']).toBe('community');
+    expect(byUrl['https://e.com/b']).toBe('naver');
+  });
+
   it('실패한 어댑터는 건너뛰고 나머지로 진행한다', async () => {
     const ok = stub('ok', [{ title: 'X', url: 'https://e.com/1' }]);
     const bad: SourceAdapter = {
