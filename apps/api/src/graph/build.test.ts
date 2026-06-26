@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GraphSnapshotSchema } from '@cerebro/shared';
 import { normalize } from '../collect/normalize.js';
 import { buildGraphFromCollection } from './build.js';
+import type { UsageReport } from '../analyze/report.js';
 
 const NOW = '2026-06-25T00:00:00.000Z';
 
@@ -68,5 +69,40 @@ describe('buildGraphFromCollection', () => {
     const branches = graph.nodes.filter((n) => n.kind !== 'center');
     expect(branches.length).toBeLessThanOrEqual(10);
     expect(() => GraphSnapshotSchema.parse(graph)).not.toThrow();
+  });
+});
+
+describe('buildGraphFromCollection — LLM 활용 관점 그래프 (ADR-0008)', () => {
+  const items = [
+    normalize({ title: '토스 투자 유치', url: 'https://www.yna.co.kr/view/1', snippet: '투자' }, 'naver', 's1', NOW),
+    normalize({ title: '토스 채용', url: 'https://blog.naver.com/u/1', snippet: '채용' }, 'naver', 's2', NOW),
+  ];
+
+  it('분석이 있으면 중심(요약)+활용 관점 노드 그래프를 만든다', () => {
+    const analysis: UsageReport = {
+      summary: '토스는 투자·채용을 확대 중이다.',
+      angles: [
+        { key: 'investment', label: '투자 관점', hook: '호재 가능성', report: '투자 유치는 성장 신호.', sourceIds: ['s1'] },
+        { key: 'career', label: '취업·커리어', hook: '채용 확대', report: '구직 기회 증가.', sourceIds: ['s1', 's2'] },
+      ],
+    };
+    const graph = buildGraphFromCollection('토스', 'company', items, NOW, analysis);
+
+    expect(() => GraphSnapshotSchema.parse(graph)).not.toThrow();
+    const center = graph.nodes.find((n) => n.kind === 'center');
+    expect(center?.report).toBe('토스는 투자·채용을 확대 중이다.');
+
+    const usage = graph.nodes.filter((n) => n.kind === 'usage');
+    expect(usage.map((n) => n.id)).toEqual(['usage-investment', 'usage-career']);
+    expect(usage.find((n) => n.id === 'usage-investment')?.report).toBe('투자 유치는 성장 신호.');
+    expect(usage.find((n) => n.id === 'usage-investment')?.sourceIds).toEqual(['s1']);
+    expect(graph.edges.every((e) => e.source === 'center' && e.relation === '활용')).toBe(true);
+  });
+
+  it('활용 관점이 비면 휴리스틱(카테고리/토픽) 그래프로 폴백한다', () => {
+    const analysis: UsageReport = { summary: '요약만 있음', angles: [] };
+    const graph = buildGraphFromCollection('토스', 'company', items, NOW, analysis);
+    expect(graph.nodes.some((n) => n.kind === 'usage')).toBe(false);
+    expect(graph.nodes.some((n) => n.kind === 'center')).toBe(true);
   });
 });

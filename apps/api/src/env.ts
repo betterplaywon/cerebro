@@ -22,6 +22,10 @@ const EnvSchema = z.object({
   NAVER_CLIENT_SECRET: optionalSecret,
   // 카카오(다음) 검색 API — 국내 커뮤니티 커버리지 보완(미설정 시 kakao 어댑터 비활성).
   KAKAO_REST_API_KEY: optionalSecret,
+  // Claude 분석 리포트(활용 관점). 미설정 시 LLM 분석 비활성 → 기존 휴리스틱 그래프로 폴백(지출 0).
+  ANTHROPIC_API_KEY: optionalSecret,
+  /** 분석에 쓸 Claude 모델. 비용·품질 균형으로 Sonnet 4.6 기본(ADR-0008). */
+  ANALYSIS_MODEL: z.string().min(1).default('claude-sonnet-4-6'),
 });
 
 export const env = EnvSchema.parse(process.env);
