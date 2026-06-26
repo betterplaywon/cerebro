@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useState } from 'react';
-import type { GraphNode, GraphSnapshot } from '@cerebro/shared';
-import { searchCerebro } from './api/client';
+import type { GraphNode } from '@cerebro/shared';
+import { useCerebroSearch } from './hooks/useCerebroSearch';
 import { SearchBar } from './components/SearchBar';
 import { CerebroLoader } from './components/CerebroLoader';
 import { DetailPanel } from './components/DetailPanel';
@@ -12,27 +12,18 @@ const MindMapCanvas = lazy(() =>
   import('./components/MindMapCanvas').then((m) => ({ default: m.MindMapCanvas })),
 );
 
-type Status = 'idle' | 'loading' | 'ready' | 'error';
-
 export default function App() {
-  const [status, setStatus] = useState<Status>('idle');
-  const [graph, setGraph] = useState<GraphSnapshot | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // 서버상태(검색 결과)는 TanStack Query 훅이, 선택 노드(UI 상태)는 로컬 상태가 담당.
+  const { status, graph, error, search } = useCerebroSearch();
   const [selected, setSelected] = useState<GraphNode | null>(null);
 
-  const handleSearch = useCallback(async (query: string) => {
-    setStatus('loading');
-    setError(null);
-    setSelected(null);
-    try {
-      const res = await searchCerebro(query);
-      setGraph(res.graph);
-      setStatus('ready');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다');
-      setStatus('error');
-    }
-  }, []);
+  const handleSearch = useCallback(
+    (query: string) => {
+      setSelected(null); // 새 검색이면 이전 선택 해제
+      search(query);
+    },
+    [search],
+  );
 
   return (
     <div className="app">
