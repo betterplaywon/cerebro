@@ -21,11 +21,12 @@ const SCENE = {
   glow: { centerRadius: 0.42, branchRadius: 0.18, centerEmissive: 1.7, branchEmissive: 1.15 },
   tile: { distanceFactor: 12, centerIcon: 20, branchIcon: 16 },
   edge: { color: '#3ac8f5', width: 1.3, opacity: 0.45 },
-  focus: { lerp: 0.12, settleDistance: 0.04 },
+  /** lerp=프레임당 접근 비율, settleDistance=정착 임계, radius=포커스 시 노드+이웃을 담는 프레이밍 반경. */
+  focus: { lerp: 0.12, settleDistance: 0.04, radius: 2.6 },
   bloom: { intensity: 0.55, luminanceThreshold: 0.32, luminanceSmoothing: 0.9 },
   vignette: { offset: 0.3, darkness: 0.5 },
   /** 그래프 전체를 화면에 담을 때의 여백 배수(세로 화면에서 좌우 잘림 방지). */
-  fit: { margin: 1.2 },
+  fit: { margin: 1.05 },
   /** 클릭/호버용 투명 히트 구 반경 — 작은 글로우 코어 대신 넉넉히 잡아 조준성↑. */
   hit: { center: 0.95, branch: 0.6 },
   /** 줌 한계: 너무 가깝거나(노드 통과) 너무 멀어(프레이밍 깨짐) 잘리지 않게. */
@@ -61,7 +62,9 @@ function NodeGlow({ node, position }: { node: GraphNode; position: Vec3 }) {
   const isCenter = node.kind === 'center';
   return (
     <mesh position={position}>
-      <sphereGeometry args={[isCenter ? SCENE.glow.centerRadius : SCENE.glow.branchRadius, 20, 20]} />
+      <sphereGeometry
+        args={[isCenter ? SCENE.glow.centerRadius : SCENE.glow.branchRadius, 20, 20]}
+      />
       <meshStandardMaterial
         color={color}
         emissive={color}
@@ -100,7 +103,10 @@ function NodeTile({ node, position, selected, hovered, onSelect }: NodeViewProps
       >
         {!isConcept && (
           <span className="node-tile__icon">
-            <CategoryIcon kind={node.kind} size={isCenter ? SCENE.tile.centerIcon : SCENE.tile.branchIcon} />
+            <CategoryIcon
+              kind={node.kind}
+              size={isCenter ? SCENE.tile.centerIcon : SCENE.tile.branchIcon}
+            />
           </span>
         )}
         <span className="node-tile__label">{node.label}</span>
@@ -153,20 +159,45 @@ interface OrbitLike {
   update: () => void;
 }
 
-/** 노드 선택 시 OrbitControls의 회전 중심(target)을 그 노드로 부드럽게 이동 → 클릭한 노드 기준 공전.
- *  정착하면 멈춰 사용자 팬을 방해하지 않는다(프레임당 lerp 1회, 경량). */
+/** 노드 선택 시 카메라를 그 노드로 "포커스": 회전 중심(target)과 카메라 위치를 함께 보간해
+ *  클릭한 노드를 화면 **중앙**에 두고, 현재 시야 방향을 유지한 채 **일정한 근접 거리로 확대**한다.
+ *  → 멀리 있던 노드는 가까이 날아들며 확대되고, 정착하면 멈춰 사용자 조작을 방해하지 않는다. */
 function FocusController({ target }: { target: Vec3 | null }) {
+  const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
   const controls = useThree((s) => s.controls) as OrbitLike | null;
-  const dest = useMemo(() => (target ? new Vector3(target[0], target[1], target[2]) : null), [target]);
+
+  const destTarget = useMemo(
+    () => (target ? new Vector3(target[0], target[1], target[2]) : null),
+    [target],
+  );
+  const destPos = useRef<Vector3 | null>(null);
   const settled = useRef(false);
+
+  // 선택이 바뀌면 목표 카메라 위치를 한 번 계산(시야 방향 유지 + 노드 기준 근접 거리).
   useEffect(() => {
     settled.current = false;
-  }, [dest]);
+    if (!destTarget || !controls) {
+      destPos.current = null;
+      return;
+    }
+    const viewDir = camera.position.clone().sub(controls.target);
+    if (viewDir.lengthSq() < 1e-6) viewDir.set(0, 0, 1);
+    viewDir.normalize();
+    const aspect = size.width / Math.max(size.height, 1);
+    const fov = camera instanceof PerspectiveCamera ? camera.fov : SCENE.camera.fov;
+    const distance = fitCameraDistance(SCENE.focus.radius, fov, aspect, SCENE.fit.margin);
+    destPos.current = destTarget.clone().addScaledVector(viewDir, distance);
+  }, [destTarget, controls, camera, size.width, size.height]);
+
   useFrame(() => {
-    if (!controls || !dest || settled.current) return;
-    controls.target.lerp(dest, SCENE.focus.lerp);
+    if (!controls || !destTarget || !destPos.current || settled.current) return;
+    controls.target.lerp(destTarget, SCENE.focus.lerp);
+    camera.position.lerp(destPos.current, SCENE.focus.lerp);
     controls.update();
-    if (controls.target.distanceTo(dest) < SCENE.focus.settleDistance) settled.current = true;
+    const centered = controls.target.distanceTo(destTarget) < SCENE.focus.settleDistance;
+    const zoomed = camera.position.distanceTo(destPos.current) < SCENE.focus.settleDistance;
+    if (centered && zoomed) settled.current = true;
   });
   return null;
 }
@@ -211,10 +242,18 @@ export function MindMapCanvas({ graph, selectedId, onSelect }: MindMapCanvasProp
   const selectedPos = selectedId ? (positions.get(selectedId) ?? null) : null;
 
   return (
-    <Canvas camera={{ position: SCENE.camera.position, fov: SCENE.camera.fov }} dpr={SCENE.dpr} gl={{ alpha: true, antialias: true }}>
+    <Canvas
+      camera={{ position: SCENE.camera.position, fov: SCENE.camera.fov }}
+      dpr={SCENE.dpr}
+      gl={{ alpha: true, antialias: true }}
+    >
       <ambientLight intensity={SCENE.lights.ambient} />
       <pointLight position={SCENE.lights.key.position} intensity={SCENE.lights.key.intensity} />
-      <pointLight position={SCENE.lights.rim.position} intensity={SCENE.lights.rim.intensity} color={SCENE.lights.rim.color} />
+      <pointLight
+        position={SCENE.lights.rim.position}
+        intensity={SCENE.lights.rim.intensity}
+        color={SCENE.lights.rim.color}
+      />
 
       {edgeLines.map((edge) => (
         <Line
@@ -229,7 +268,9 @@ export function MindMapCanvas({ graph, selectedId, onSelect }: MindMapCanvasProp
 
       {graph.nodes.map((node) => {
         const position = positions.get(node.id);
-        return position ? <NodeGlow key={`glow-${node.id}`} node={node} position={position} /> : null;
+        return position ? (
+          <NodeGlow key={`glow-${node.id}`} node={node} position={position} />
+        ) : null;
       })}
 
       {graph.nodes.map((node) => {
