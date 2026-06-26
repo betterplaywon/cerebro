@@ -1,7 +1,7 @@
-import { useCallback, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type QueryStatus } from '@tanstack/react-query';
 import type { GraphSnapshot } from '@cerebro/shared';
 import { searchQuery } from '../queries/search';
+import { useUrlSearchParam } from './useUrlSearchParam';
 
 export type SearchStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -9,41 +9,46 @@ export interface CerebroSearch {
   status: SearchStatus;
   graph: GraphSnapshot | null;
   error: string | null;
-  /** 현재 검색어(빈 문자열이면 미검색) */
+  /** 현재 검색어(URL `?q=`). 빈 문자열이면 미검색 */
   query: string;
-  /** 검색 실행(검색어 설정 → TanStack Query가 페칭·캐시·재시도 담당) */
+  /** 검색 실행 — URL을 갱신하면 TanStack Query가 페칭·캐시·재시도를 담당 */
   search: (query: string) => void;
 }
 
+/** react-query status → 앱 SearchStatus 매핑(객체 매핑 — 중첩 삼항 제거). */
+const SEARCH_STATUS_BY_QUERY_STATUS: Record<QueryStatus, SearchStatus> = {
+  pending: 'loading',
+  error: 'error',
+  success: 'ready',
+};
+
+/** 검색어 유무 + 쿼리 상태 → 표시 상태(단일 책임). */
+function deriveStatus(query: string, queryStatus: QueryStatus): SearchStatus {
+  if (query.trim().length === 0) return 'idle';
+  return SEARCH_STATUS_BY_QUERY_STATUS[queryStatus];
+}
+
+/** 쿼리 에러 → 사용자 메시지(없으면 null). */
+function toErrorMessage(error: unknown): string | null {
+  if (!error) return null;
+  if (error instanceof Error) return error.message;
+  return '알 수 없는 오류가 발생했습니다';
+}
+
 /**
- * 검색 데이터 페칭 훅 — 서버상태(GraphSnapshot)를 TanStack Query로 관리한다(ARCHITECTURE §2.1).
- * 쿼리 정의(키·queryFn·enabled)는 query-factory(`searchQuery`)에 외부화하고, 이 훅은
- * 현재 검색어 상태와 4-상태 정규화만 담당한다(관심사 분리·결합도↓).
- * 같은 검색어 재요청은 L1 캐시로 즉시 응답(무비용), 일시적 오류는 재시도, 중복 요청은 dedupe된다.
+ * 검색 데이터 페칭 훅 — 서버상태(GraphSnapshot)는 TanStack Query, 검색어(클라이언트 상태)는 URL이
+ * 단일 진실원이다(ARCHITECTURE §2.1). 서버/클라이언트 상태를 분리하고, 쿼리 정의는 query-factory
+ * (`searchQuery`)가 소유한다. 이 훅의 책임은 둘을 잇고 표시 상태로 정규화하는 것뿐(SRP).
  */
 export function useCerebroSearch(): CerebroSearch {
-  const [query, setQuery] = useState('');
-
+  const [query, search] = useUrlSearchParam('q');
   const result = useQuery(searchQuery(query));
 
-  const search = useCallback((next: string) => {
-    setQuery(next.trim());
-  }, []);
-
-  // react-query 상태를 앱의 4-상태 머신으로 정규화.
-  // 캐시 히트면 data가 즉시 있어 loading 깜빡임 없이 ready로 간다(재검색 무비용).
-  const status: SearchStatus =
-    query.length === 0 ? 'idle' : result.isError ? 'error' : result.data ? 'ready' : 'loading';
-
   return {
-    status,
+    status: deriveStatus(query, result.status),
     graph: result.data?.graph ?? null,
-    error: result.isError ? errorMessage(result.error) : null,
+    error: toErrorMessage(result.error),
     query,
     search,
   };
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다';
 }
