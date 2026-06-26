@@ -1,6 +1,7 @@
 import type { Source, SourceType } from '@cerebro/shared';
 import type { RawItem } from '../sources/types.js';
 import { stripParticle } from './korean.js';
+import { redactSensitive } from './pii.js';
 
 export interface NormalizedItem {
   source: Source;
@@ -64,17 +65,21 @@ export function normalize(
   id: string,
   collectedAt: string,
 ): NormalizedItem {
+  // PIPA: 민감 식별자(주민번호·휴대전화)는 저장·표시·토큰화 전에 마스킹(경계 가드).
+  const title = redactSensitive(raw.title);
+  const snippet = raw.snippet ? redactSensitive(raw.snippet) : undefined;
+
   const source: Source = {
     id,
     type,
-    title: raw.title,
+    title,
     url: raw.url,
-    snippet: raw.snippet,
+    snippet,
     publishedAt: raw.publishedAt,
     collectedAt,
     confidence: baseConfidence(type),
   };
-  const tokens = unique([...tokenize(raw.title), ...tokenize(raw.snippet ?? '')]);
+  const tokens = unique([...tokenize(title), ...tokenize(snippet ?? '')]);
   return { source, tokens };
 }
 
