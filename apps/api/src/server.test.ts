@@ -55,4 +55,22 @@ describe('cerebro api', () => {
     // 캐시 히트도 동일 그래프(계약 만족)
     expect(second.json().graph.subject.query).toBe('카카오');
   });
+
+  it('없는 경로 → 404를 일관 에러 스키마로 반환', async () => {
+    const res = await app.inject({ method: 'GET', url: '/nope' });
+    expect(res.statusCode).toBe(404);
+    expect(res.json().error.code).toBe('NOT_FOUND');
+  });
+
+  it('잘못된 JSON 바디 → 미처리 오류도 ApiError(4xx)로 일관 응답', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search',
+      headers: { 'content-type': 'application/json' },
+      payload: '{ not json',
+    });
+    expect(res.statusCode).toBe(400);
+    expect(typeof res.json().error.code).toBe('string');
+    expect(typeof res.json().error.message).toBe('string');
+  });
 });
