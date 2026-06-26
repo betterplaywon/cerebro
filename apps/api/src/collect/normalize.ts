@@ -1,5 +1,6 @@
 import type { Source, SourceType } from '@cerebro/shared';
 import type { RawItem } from '../sources/types.js';
+import { stripParticle } from './korean.js';
 
 export interface NormalizedItem {
   source: Source;
@@ -26,12 +27,18 @@ export function isHttpUrl(url: string): boolean {
   }
 }
 
-/** 매우 단순한 토큰화(MVP). 한국어 형태소 분석은 추후 고도화 대상. */
+/**
+ * 키워드 토큰화. 분리 후 한국어 조사를 떼어 같은 개체의 파편화를 막는다
+ * (토스가/토스는/토스의 → 토스). 조사 분리 규칙·트레이드오프는 ADR-0004 / `korean.ts`.
+ * 절단으로 토큰이 짧아질 수 있어 길이·불용어 필터를 한 번 더 적용한다.
+ */
 export function tokenize(text: string): string[] {
   return text
     .toLowerCase()
     .split(/[^0-9a-z가-힣]+/i)
-    .filter((t) => t.length >= 2 && !STOPWORDS.has(t) && !/^\d+$/.test(t));
+    .filter((t) => t.length >= 2 && !STOPWORDS.has(t) && !/^\d+$/.test(t))
+    .map(stripParticle)
+    .filter((t) => t.length >= 2 && !STOPWORDS.has(t));
 }
 
 const BASE_CONFIDENCE: Partial<Record<SourceType, number>> = {
