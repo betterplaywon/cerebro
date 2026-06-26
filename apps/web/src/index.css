@@ -225,6 +225,8 @@ body {
   border-left: 1px solid var(--border);
   padding: 1rem 1.1rem;
   overflow-y: auto;
+  /* 출처 요약(z-index:1) 위에 위치 — 모바일 전체폭일 때 겹침 방지 */
+  z-index: 2;
 }
 
 .detail-panel__header {
@@ -302,13 +304,78 @@ body {
   font-size: 0.72rem;
 }
 
+.src-meta__type {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
 .muted {
   color: var(--muted);
+}
+
+/* ───────── Source summary (하단: 분석된 출처 카운트 + 유형 배지) ───────── */
+.source-summary {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  max-width: min(60vw, 460px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(11, 16, 32, 0.82);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  pointer-events: none;
+  /* 상세 패널(우측 슬라이드인, 모바일 전체폭)보다 아래 레이어 — 겹침 시 패널이 위 */
+  z-index: 1;
+}
+
+.source-summary__total {
+  color: var(--fg);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.source-summary__badges {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.55rem;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.source-badge__label {
+  color: var(--fg);
+}
+
+.source-badge__count {
+  color: var(--accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 640px) {
   .detail-panel {
     width: 100vw;
+  }
+  .source-summary {
+    max-width: calc(100vw - 1.5rem);
   }
 }
 
