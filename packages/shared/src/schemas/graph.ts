@@ -66,6 +66,11 @@ export const GraphNodeSchema = z.object({
   label: z.string().min(1),
   kind: NodeKindSchema,
   summary: z.string().optional(),
+  /**
+   * 상세 리포트 본문(여러 문단). 활용 관점(usage) 노드의 활용 방법 분석,
+   * 중심(center) 노드의 핵심 정보 요약 등 LLM이 생성한 서술형 내용을 담는다.
+   */
+  report: z.string().optional(),
   /** 중요도 0~1 — 중심에 가까울수록/강조될수록 높음 */
   importance: unitInterval,
   /** 정보 신뢰도 0~1 */
