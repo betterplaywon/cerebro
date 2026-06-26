@@ -66,6 +66,13 @@ export function CategoryIcon({ kind, size = 14 }: { kind: NodeKind; size?: numbe
           <circle cx="8" cy="8" r="3.2" />
         </svg>
       );
+    case 'usage': // 전구(활용 관점)
+      return (
+        <svg {...common}>
+          <path d="M8 1.8a4.2 4.2 0 0 0-2.6 7.6c.5.4.8 1 .8 1.6h3.6c0-.6.3-1.2.8-1.6A4.2 4.2 0 0 0 8 1.8z" />
+          <path d="M6.4 13.2h3.2M6.9 14.6h2.2" />
+        </svg>
+      );
     case 'concept': // 태그/해시
     default:
       return (

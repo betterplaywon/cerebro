@@ -17,6 +17,7 @@ describe('NODE_COLORS = DESIGN-SYSTEM §1.4 SSOT', () => {
       reputation: '#3FD68A',
       concept: '#8AA0FF',
       attribute: '#8A93A8',
+      usage: '#FF9F5A',
     });
   });
 
