@@ -3,6 +3,7 @@ import {
   GraphSnapshotSchema,
   GraphNodeSchema,
   SearchRequestSchema,
+  SourceSchema,
 } from '../index.js';
 
 describe('GraphNodeSchema', () => {
@@ -27,6 +28,26 @@ describe('GraphNodeSchema', () => {
 describe('SearchRequestSchema', () => {
   it('빈 검색어를 거부한다', () => {
     expect(() => SearchRequestSchema.parse({ query: '   ' })).toThrow();
+  });
+});
+
+describe('SourceSchema url 스킴 가드 (XSS 방지)', () => {
+  const base = {
+    id: 'src1',
+    type: 'naver' as const,
+    title: '제목',
+    collectedAt: '2026-06-25T00:00:00.000Z',
+    confidence: 0.8,
+  };
+
+  it('http(s) URL은 통과시킨다', () => {
+    expect(() => SourceSchema.parse({ ...base, url: 'https://example.com/a' })).not.toThrow();
+    expect(() => SourceSchema.parse({ ...base, url: 'http://example.com/a' })).not.toThrow();
+  });
+
+  it('javascript:·data: 등 위험 스킴은 거부한다', () => {
+    expect(() => SourceSchema.parse({ ...base, url: 'javascript:alert(1)' })).toThrow();
+    expect(() => SourceSchema.parse({ ...base, url: 'data:text/html,<script>1</script>' })).toThrow();
   });
 });
 

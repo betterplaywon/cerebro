@@ -13,6 +13,19 @@ const STOPWORDS = new Set([
   'the', 'a', 'an', 'of', 'and', 'or', 'to', 'for', 'in', 'on', 'with', 'is', 'are',
 ]);
 
+/**
+ * 출처 링크가 http(s) 스킴인지 검사. 수집 경계에서 `javascript:`·`data:` 등
+ * 위험 스킴 항목을 걸러 그래프(계약)에 유입되는 것을 막는다(XSS/SSRF 방지).
+ */
+export function isHttpUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 /** 매우 단순한 토큰화(MVP). 한국어 형태소 분석은 추후 고도화 대상. */
 export function tokenize(text: string): string[] {
   return text

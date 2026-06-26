@@ -1,5 +1,6 @@
 import type { GraphNode, GraphSnapshot } from '@cerebro/shared';
 import { NODE_KIND_LABELS, NODE_USAGE_HINTS } from '../lib/colors';
+import { SOURCE_TYPE_LABELS } from '../lib/sources';
 
 interface DetailPanelProps {
   node: GraphNode;
@@ -45,7 +46,8 @@ export function DetailPanel({ node, graph, onClose }: DetailPanelProps) {
                   {s.title}
                 </a>
                 <span className="src-meta">
-                  {s.type} · 수집 {new Date(s.collectedAt).toLocaleDateString('ko-KR')}
+                  <span className="src-meta__type">{SOURCE_TYPE_LABELS[s.type]}</span> · 수집{' '}
+                  {new Date(s.collectedAt).toLocaleDateString('ko-KR')}
                 </span>
               </li>
             ))}

@@ -4,6 +4,7 @@ import { searchCerebro } from './api/client';
 import { SearchBar } from './components/SearchBar';
 import { CerebroLoader } from './components/CerebroLoader';
 import { DetailPanel } from './components/DetailPanel';
+import { SourceSummary } from './components/SourceSummary';
 
 // 3D 캔버스(three.js)는 결과가 준비된 뒤에만 필요 → 초기 번들에서 분리(lazy).
 const MindMapCanvas = lazy(() =>
@@ -61,6 +62,7 @@ export default function App() {
             {selected && (
               <DetailPanel node={selected} graph={graph} onClose={() => setSelected(null)} />
             )}
+            <SourceSummary sources={graph.sources} />
           </div>
         )}
       </main>

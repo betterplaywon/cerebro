@@ -1,7 +1,7 @@
 import type { SubjectType } from '@cerebro/shared';
 import type { SourceAdapter } from '../sources/types.js';
 import { getEnabledAdapters } from '../sources/registry.js';
-import { normalize, type NormalizedItem } from './normalize.js';
+import { isHttpUrl, normalize, type NormalizedItem } from './normalize.js';
 import { dedupeByUrl } from './dedup.js';
 
 export interface CollectResult {
@@ -34,7 +34,9 @@ export async function collectAll(
     if (!adapter) return;
     if (result.status === 'fulfilled') {
       usedAdapters.push(adapter.id);
+      // 위험 스킴(javascript:/data: 등) 링크는 계약 유입 전에 차단
       for (const raw of result.value) {
+        if (!isHttpUrl(raw.url)) continue;
         items.push(normalize(raw, adapter.sourceType, `src-${idx}`, collectedAt));
         idx += 1;
       }
