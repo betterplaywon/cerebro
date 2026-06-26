@@ -68,6 +68,19 @@ describe('naverAdapter', () => {
     expect(byPath.news).toBeUndefined();
   });
 
+  it('stripHtml 후 제목이 비면 항목을 버린다(빈 라벨 노드 방지)', async () => {
+    const fetchImpl = (() =>
+      Promise.resolve(
+        jsonResponse({ items: [{ title: '<b></b>', link: 'https://x.com/1', description: 'd' }] }),
+      )) as typeof fetch;
+
+    const items = await createNaverAdapter({ clientId: 'a', clientSecret: 'b', fetchImpl }).collect({
+      query: 'x',
+    });
+
+    expect(items).toEqual([]);
+  });
+
   it('인증 헤더를 전달한다', async () => {
     let headers: Record<string, string> | undefined;
     const fetchImpl = ((_url: string | URL, init?: RequestInit) => {
