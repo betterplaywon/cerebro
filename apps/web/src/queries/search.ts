@@ -22,6 +22,6 @@ export function searchQuery(query: string) {
   return queryOptions({
     queryKey: searchKeys.byQuery(query),
     queryFn: ({ signal }) => searchCerebro(query, signal),
-    enabled: query.length > 0,
+    enabled: query.trim().length > 0, // URL 직접 편집 등으로 공백만 들어와도 페칭하지 않음
   });
 }
