@@ -31,9 +31,10 @@ const MAX_BRANCHES = 10;
 const MAX_REPRESENTATIVES = 3;
 
 /**
- * 수집·정규화된 항목으로 중심-가지 그래프를 만든다.
- * 가지 = (1)출처 출처지 기반 **카테고리 노드**(제품/뉴스/평판/채널/인물) + (2)교차 출처 상위 **키워드 토픽**(concept).
- * 두 신호는 직교한다(어떤 출처인가 vs 무슨 키워드인가) — 한 출처가 카테고리와 토픽 양쪽을 뒷받침할 수 있다.
+ * 수집·정규화된 항목으로 중심-가지 그래프를 만든다(전략 선택만 담당).
+ * - LLM 분석(활용 관점)이 있으면 **usage 그래프**(ADR-0008).
+ * - 없으면(키 미설정/실패) **휴리스틱 그래프**(카테고리+토픽)로 폴백.
+ * 각 전략의 구현은 buildUsageGraph / buildHeuristicGraph가 책임진다(SRP).
  */
 export function buildGraphFromCollection(
   query: string,
@@ -44,12 +45,24 @@ export function buildGraphFromCollection(
 ): GraphSnapshot {
   const sources: Source[] = items.map((i) => i.source);
 
-  // LLM 분석이 있으면 활용 관점(usage) 노드 그래프를 만든다(ADR-0008).
-  // 없으면(키 미설정/실패) 아래 휴리스틱(카테고리+토픽) 그래프로 폴백한다.
   if (analysis && analysis.angles.length > 0) {
     return buildUsageGraph(query, subjectType, sources, analysis, generatedAt);
   }
+  return buildHeuristicGraph(query, subjectType, items, sources, generatedAt);
+}
 
+/**
+ * 휴리스틱 그래프(LLM 폴백). 가지 = (1)출처 출처지 기반 **카테고리 노드**(제품/뉴스/평판/채널/인물)
+ * + (2)교차 출처 상위 **키워드 토픽**(concept). 두 신호는 직교한다(어떤 출처인가 vs 무슨 키워드인가)
+ * — 한 출처가 카테고리와 토픽 양쪽을 뒷받침할 수 있다.
+ */
+function buildHeuristicGraph(
+  query: string,
+  subjectType: SubjectType | undefined,
+  items: NormalizedItem[],
+  sources: Source[],
+  generatedAt: string,
+): GraphSnapshot {
   const center: GraphNode = {
     id: 'center',
     label: query,
