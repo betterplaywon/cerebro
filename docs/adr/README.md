@@ -14,3 +14,5 @@
 | [0007](./0007-social-community-sources.md) | 국내 커뮤니티 소스(네이버/카카오 공식 API) 도입 + SNS 보류 | Accepted |
 | [0008](./0008-llm-usage-report.md) | 활용 관점 리포트: 수집 정보를 Claude로 정제해 활용법 제공 | Accepted |
 | [0009](./0009-deploy-split-vercel-render.md) | 배포 분리: web=Vercel · api=Render (Supabase 관리형) | Accepted |
+| [0010](./0010-bm-broad-first-intent-axis.md) | BM: broad-first + 의도(활용 관점)축 수익화 + 프로슈머 우선 freemium | Accepted |
+| [0011](./0011-llm-report-cache-and-licensing-gate.md) | LLM 리포트 2단 캐시(데이터 30분/리포트 7일)+프리웜 + 상업 이용 약관 게이트 | Accepted |
