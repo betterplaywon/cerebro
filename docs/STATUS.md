@@ -10,7 +10,7 @@
 
 ## 🔜 다음 작업 — 콜드스타트 단일 기준점 (ADR-0014 이후 · 2026-06-27)
 
-> **새 세션은 이 절부터.** 근거: 코드 그라운드트루스 감사 + 의존순서 설계 + 적대적 검증(7-에이전트 워크플로). 키스톤 실행명세 = [BACKLOG NOW#1](./BACKLOG.md).
+> **새 세션은 이 절부터.** 키스톤(LAYER-SPLIT)은 ✅ 완료(아래 §). **다음 최우선 = M1 출시 하드게이트(PII-FILTER · DELETION-RIGHTS)** — 명세 = [BACKLOG NOW](./BACKLOG.md).
 
 ### ✅ LAYER-SPLIT 완료 — ADR-0014 능동 위반 해소(2026-06-27, 브랜치 `security/source-layer-split`)
 이전 위반(`report.ts`가 네이버·카카오 Layer A 스니펫을 Claude에 보내고 7일 캐시에 적재)을 **단일 게이트로 차단**했다. 구현 요지(상세=[ADR-0014 §구현](./adr/0014-source-license-segmentation.md)):
@@ -19,7 +19,7 @@
 - `dedup`은 동일 URL A/B 충돌 시 B 보존. 공유 계약 미변경(내부 타입만).
 - **정책 결정**: `build.ts`의 Layer A 파생 concept/category 노드는 **휘발성 표시로 허용**(≤30분, 원문은 무수정 노출 — 약관 §2.1 준수). 근거=ADR-0014 §정책 결정.
 - **잔여 위험(수락)**: LLM 산출물 PII는 프롬프트 가드 의존 → 출력측 재마스킹은 PII-FILTER와 함께. 무료 Layer B 빈약(위키 위주) → 공공데이터/Tavily로 보강.
-- 게이트: typecheck·lint·test(255)·build 그린. report/build/orchestrator/dedup 테스트 전부 통과 + 레이어 게이트 단위테스트 추가.
+- 게이트: typecheck·lint·test(api 255·web 32)·build 그린. report/build/orchestrator/dedup 테스트 전부 통과 + 레이어 게이트 단위테스트 추가.
 
 ### 권장 착수 순서 (의존 그래프)
 1. ✅ **LAYER-SPLIT** (키스톤) — 완료. 후속의 선행 정합 기반 확보.
@@ -29,7 +29,7 @@
 5. **SHARED-LAYER-CONTRACT**(S, M2 저장보드 필요 시) · **PHASE0-INSTR**(M, 의도축 계측 GTM §6.1) · **SUPABASE-AUTH**(L, M2) → **MONITORING**(L, M2 마지막, Layer B 전용 소비).
 
 ### ✅ 키스톤(LAYER-SPLIT) 적대적 검증 항목 — 모두 반영 완료 (이력)
-- **단일 진실원** = `SourceAdapter.layer:'A'|'B'`(sources/types.ts:30-36). naver/kakao='A', wikipedia='B'. → `normalize()` 시그니처에 layer 인자 → `NormalizedItem.layer` 보존(orchestrator.ts:41에서 adapter.layer 전달) → report.ts:139 직전 `items.filter(i=>i.layer==='B')`, 0건이면 `return null`(휴리스틱 폴백). 이 한 게이트로 LLM 입력·7일 캐시·인용(usage sourceIds)이 정합.
+- **단일 진실원** = `SourceAdapter.layer:'A'|'B'`(sources/types.ts:10·43). naver/kakao='A', wikipedia='B'. → `normalize()` 시그니처에 layer 인자 → `NormalizedItem.layer` 보존(orchestrator.ts:43에서 adapter.layer 전달) → report.ts:140 `items.filter((it)=>it.layer==='B')`, 0건이면 `return null`(휴리스틱 폴백). 이 한 게이트로 LLM 입력·7일 캐시·인용(usage sourceIds)이 정합.
 - **(필수)** layer 필수화는 기존 테스트를 깨뜨린다 — `report.test.ts`의 sampleItems()가 전부 `naver`(Layer A)라 필터 도입 시 analyzeUsage가 null → 테스트 실패. **픽스처를 wikipedia(Layer B)로 전환** + `build.test.ts:61`·orchestrator 호출부 갱신. 수용기준에 "필터 도입 후 report/build/orchestrator 테스트 전부 그린" 명시.
 - **(정책 결정)** `build.ts:159-213`이 Layer A 제목·스니펫을 토큰화해 concept/category 파생노드를 만든다(ADR-0014 §2.1 '무수정 독립노출'과 긴장). 30분·표시라 저위험이나 키스톤 머지 전 "Layer A는 원문 출처노드만 vs 파생 허용"을 명문화('모두 자동 정합'은 30분 스냅샷 재가공을 누락한 과장).
 - **(잔여위험)** LLM 산출물(summary/angles[].report)의 PII는 입력측 redactSensitive 범위 밖 → report.ts 프롬프트 가드에만 의존. 출력측 재마스킹을 추가하거나 ADR에 잔여위험으로 명시 수락.

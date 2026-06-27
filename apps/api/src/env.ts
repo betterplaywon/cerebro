@@ -22,8 +22,12 @@ export const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8787),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
-  /** 검색 결과(스냅샷=데이터+리포트) 캐시 TTL(ms). 신선도·쿼터·핫패스 — 기본 30분 */
-  CACHE_TTL_MS: z.coerce.number().int().positive().default(1000 * 60 * 30),
+  /**
+   * 검색 결과(스냅샷=데이터+리포트) 캐시 TTL(ms). 신선도·쿼터·핫패스 — 기본 30분.
+   * 상한 30분은 ADR-0014 컴플라이언스: 스냅샷은 Layer A(네이버·카카오) 표시 노드를 포함하는
+   * 유일한 요청-초과 저장소이며, Layer A는 '≤30분 단순 캐시만' 허용된다. 초과 설정은 부팅 시 거부.
+   */
+  CACHE_TTL_MS: z.coerce.number().int().positive().max(1000 * 60 * 30).default(1000 * 60 * 30),
   /**
    * LLM 활용 리포트 캐시 TTL(ms). 스냅샷과 분리된 2단 캐시(ADR-0011) — 기본 7일.
    * 데이터는 매번 신선하게 재수집하되, 비싼 LLM 리포트는 길게 재사용해 호출을 30분→7일당 1회로 격감.
