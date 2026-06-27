@@ -8,8 +8,16 @@ import {
 } from '@cerebro/shared';
 import { env } from './env.js';
 import { createTTLCache } from './lib/cache.js';
-import { createSearchOrchestrator } from './search/search-orchestrator.js';
+import { createSearchOrchestrator, type SearchOrchestrator } from './search/search-orchestrator.js';
+import type { UsageReport } from './analyze/report.js';
 import type { SourceAdapter } from './sources/types.js';
+
+// 부팅 작업(프리웜 등)이 캐시 워밍에 재사용할 수 있도록 오케스트레이터를 인스턴스에 노출.
+declare module 'fastify' {
+  interface FastifyInstance {
+    orchestrator: SearchOrchestrator;
+  }
+}
 
 export interface BuildServerOptions {
   /** 수집 어댑터 주입(테스트는 fixture 주입으로 무네트워크). 미지정 시 registry 사용. */
@@ -54,8 +62,11 @@ export function buildServer(opts: BuildServerOptions = {}): FastifyInstance {
     logger: env.NODE_ENV === 'test' ? false : { level: env.NODE_ENV === 'production' ? 'info' : 'debug' },
   });
 
+  // 2단 캐시(ADR-0011): 스냅샷(데이터+리포트) 30분 + LLM 리포트 7일. 둘 다 인스턴스 스코프(테스트 격리).
   const cache = createTTLCache<GraphSnapshot>({ ttlMs: env.CACHE_TTL_MS });
-  const orchestrator = createSearchOrchestrator({ cache, adapters: opts.adapters });
+  const reportCache = createTTLCache<UsageReport>({ ttlMs: env.REPORT_CACHE_TTL_MS });
+  const orchestrator = createSearchOrchestrator({ cache, reportCache, adapters: opts.adapters });
+  app.decorate('orchestrator', orchestrator);
 
   app.register(cors, { origin: env.CORS_ORIGIN });
 
