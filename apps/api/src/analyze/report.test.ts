@@ -3,6 +3,9 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { env } from '../env.js';
 import { normalize, type NormalizedItem } from '../collect/normalize.js';
 import { analyzeUsage } from './report.js';
+import { createBudgetTracker } from './budget.js';
+
+const SONNET = { inputUsdPerMTok: 3, outputUsdPerMTok: 15 } as const;
 
 const NOW = '2026-06-25T00:00:00.000Z';
 
@@ -23,11 +26,16 @@ function sampleItems(): NormalizedItem[] {
   ];
 }
 
-/** 텍스트 블록 하나를 반환하는 가짜 Anthropic 클라이언트 + create 스파이. */
-function mockClient(text: string, stopReason: Anthropic.Message['stop_reason'] = 'end_turn') {
+/** 텍스트 블록 하나를 반환하는 가짜 Anthropic 클라이언트 + create 스파이. usage 주입 시 응답에 포함. */
+function mockClient(
+  text: string,
+  stopReason: Anthropic.Message['stop_reason'] = 'end_turn',
+  usage?: Partial<Anthropic.Usage>,
+) {
   const create = vi.fn(async () => ({
     stop_reason: stopReason,
     content: [{ type: 'text', text }],
+    ...(usage ? { usage } : {}),
   }));
   const client = { messages: { create } } as unknown as Pick<Anthropic, 'messages'>;
   return { client, create };
@@ -108,5 +116,72 @@ describe('analyzeUsage', () => {
   it('안전성 거부(refusal)면 null을 반환한다', async () => {
     const { client } = mockClient('{}', 'refusal');
     expect(await analyzeUsage('토스', sampleItems(), { client })).toBeNull();
+  });
+});
+
+// ── 예산 서킷 브레이커 통합(ADR-0013) ──
+describe('analyzeUsage — 예산 서킷 브레이커', () => {
+  const VALID = JSON.stringify({
+    summary: '요약',
+    angles: [{ key: 'investment', hook: 'h', report: 'r', sourceRefs: [0] }],
+  });
+
+  it('서킷이 열린(예산 소진) 상태면 client.messages.create를 호출하지 않고 null 반환(지출 0)', async () => {
+    const budget = createBudgetTracker({ capUsd: 0, ...SONNET }); // cap=0 → 처음부터 차단
+    const { client, create } = mockClient(VALID, 'end_turn', { input_tokens: 100, output_tokens: 100 });
+    expect(await analyzeUsage('토스', sampleItems(), { client, budget })).toBeNull();
+    expect(create).not.toHaveBeenCalled();
+    expect(budget.getStats().spentUsd).toBe(0); // 호출 안 했으니 누적도 0
+  });
+
+  it('정상 호출 후 res.usage가 budget에 기록되어 누적 비용이 증가한다', async () => {
+    const budget = createBudgetTracker({ capUsd: 8, ...SONNET });
+    const { client, create } = mockClient(VALID, 'end_turn', {
+      input_tokens: 3000,
+      output_tokens: 2500,
+    });
+    const result = await analyzeUsage('토스', sampleItems(), { client, budget });
+    expect(result).not.toBeNull();
+    expect(create).toHaveBeenCalledOnce();
+    const stats = budget.getStats();
+    expect(stats.tokens.input).toBe(3000);
+    expect(stats.tokens.output).toBe(2500);
+    expect(stats.spentUsd).toBeCloseTo(0.0465, 6);
+  });
+
+  it('cache_* 토큰도 함께 기록한다', async () => {
+    const budget = createBudgetTracker({ capUsd: 8, ...SONNET });
+    const { client } = mockClient(VALID, 'end_turn', {
+      input_tokens: 1000,
+      output_tokens: 500,
+      cache_creation_input_tokens: 200,
+      cache_read_input_tokens: 400,
+    });
+    await analyzeUsage('토스', sampleItems(), { client, budget });
+    const stats = budget.getStats();
+    expect(stats.tokens.cacheCreation).toBe(200);
+    expect(stats.tokens.cacheRead).toBe(400);
+  });
+
+  it('refusal이어도 res.usage가 있으면 청구분을 기록한다(early-return 전 record)', async () => {
+    const budget = createBudgetTracker({ capUsd: 8, ...SONNET });
+    const { client } = mockClient('{}', 'refusal', { input_tokens: 1000, output_tokens: 500 });
+    expect(await analyzeUsage('토스', sampleItems(), { client, budget })).toBeNull();
+    expect(budget.getStats().tokens.input).toBe(1000);
+    expect(budget.getStats().tokens.output).toBe(500);
+  });
+
+  it('빈 텍스트 응답이어도 res.usage가 있으면 청구분을 기록한다', async () => {
+    const budget = createBudgetTracker({ capUsd: 8, ...SONNET });
+    const { client } = mockClient('   ', 'end_turn', { input_tokens: 800, output_tokens: 0 });
+    expect(await analyzeUsage('토스', sampleItems(), { client, budget })).toBeNull();
+    expect(budget.getStats().tokens.input).toBe(800);
+  });
+
+  it('budget 미주입이면 기존 동작(예산 통제 없음)', async () => {
+    const { client, create } = mockClient(VALID, 'end_turn', { input_tokens: 100, output_tokens: 100 });
+    const result = await analyzeUsage('토스', sampleItems(), { client });
+    expect(result).not.toBeNull();
+    expect(create).toHaveBeenCalledOnce();
   });
 });

@@ -34,3 +34,30 @@ describe('EnvSchema (ADR-0011 신규 변수)', () => {
     expect(EnvSchema.parse({ PREWARM_ON_START: raw }).PREWARM_ON_START).toBe(false);
   });
 });
+
+describe('EnvSchema (ADR-0013 예산 서킷 브레이커 변수)', () => {
+  it('미설정 시 안전 기본값(예산 8, 단가 $3/$15)을 적용한다', () => {
+    const parsed = EnvSchema.parse({});
+    expect(parsed.ANTHROPIC_BUDGET_USD).toBe(8);
+    expect(parsed.ANALYSIS_INPUT_USD_PER_MTOK).toBe(3);
+    expect(parsed.ANALYSIS_OUTPUT_USD_PER_MTOK).toBe(15);
+  });
+
+  it('문자열 값을 숫자로 강제하고, 예산 0(킬 스위치)을 허용한다', () => {
+    const parsed = EnvSchema.parse({
+      ANTHROPIC_BUDGET_USD: '5.5',
+      ANALYSIS_INPUT_USD_PER_MTOK: '4',
+      ANALYSIS_OUTPUT_USD_PER_MTOK: '20',
+    });
+    expect(parsed.ANTHROPIC_BUDGET_USD).toBe(5.5);
+    expect(parsed.ANALYSIS_INPUT_USD_PER_MTOK).toBe(4);
+    expect(parsed.ANALYSIS_OUTPUT_USD_PER_MTOK).toBe(20);
+    expect(EnvSchema.parse({ ANTHROPIC_BUDGET_USD: '0' }).ANTHROPIC_BUDGET_USD).toBe(0);
+  });
+
+  it('예산은 음수를, 단가는 0/음수를 거부한다', () => {
+    expect(() => EnvSchema.parse({ ANTHROPIC_BUDGET_USD: '-1' })).toThrow();
+    expect(() => EnvSchema.parse({ ANALYSIS_INPUT_USD_PER_MTOK: '0' })).toThrow();
+    expect(() => EnvSchema.parse({ ANALYSIS_OUTPUT_USD_PER_MTOK: '-3' })).toThrow();
+  });
+});

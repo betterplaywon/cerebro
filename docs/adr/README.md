@@ -17,3 +17,4 @@
 | [0010](./0010-bm-broad-first-intent-axis.md) | BM: broad-first + 의도(활용 관점)축 수익화 + 프로슈머 우선 freemium | Accepted |
 | [0011](./0011-llm-report-cache-and-licensing-gate.md) | LLM 리포트 2단 캐시(데이터 30분/리포트 7일)+프리웜 + 상업 이용 약관 게이트 | Accepted |
 | [0012](./0012-monitoring-alerts.md) | 모니터링/알림: 주제+의도 구독·지문 기반 변화감지·이메일+인앱 (Pro) | Accepted |
+| [0013](./0013-llm-budget-circuit-breaker.md) | LLM 예산 자동 상한(서킷 브레이커): 누적 추정비용 상한 도달 시 자동 폴백 | Accepted |
