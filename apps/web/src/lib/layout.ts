@@ -5,9 +5,9 @@ export type Vec3 = [number, number, number];
 /** 방사형 레이아웃 튜닝 상수 — 기하 값을 의미있는 이름으로(매직넘버 제거). */
 const LAYOUT = {
   /** 중심 → 1차 가지 구 반경 */
-  BRANCH_RADIUS: 5.5,
+  BRANCH_RADIUS: 4.2,
   /** 가지 → 잎 분산 반경 */
-  LEAF_RADIUS: 2.4,
+  LEAF_RADIUS: 2.0,
   /** 미연결 노드 외곽 링 반경 배수(가지 반경 대비) */
   ORPHAN_RING_FACTOR: 1.7,
   /** y축 압축 비율(구를 보기 좋게 납작하게) */
