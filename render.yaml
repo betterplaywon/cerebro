@@ -47,6 +47,8 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: DATA_GO_KR_SERVICE_KEY
+        sync: false
       # ── (예정) Supabase 연동 시 주석 해제. SERVICE_ROLE_KEY는 서버 전용·절대 VITE_ 금지 ──
       # - key: SUPABASE_URL
       #   sync: false

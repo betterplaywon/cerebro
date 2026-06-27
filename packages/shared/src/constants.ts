@@ -30,6 +30,7 @@ export const SOURCE_TYPES = [
   'sns',
   'wikipedia',
   'official',
+  'publicdata', // 공공데이터포털(data.go.kr) 등 정부·공공 구조화 사실데이터 — Layer B(상업 OK). ADR-0015
   'web',
 ] as const;
 

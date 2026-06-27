@@ -6,11 +6,11 @@
 > · **활용 관점 리포트**: 수집 정보를 Claude(Sonnet 4.6)로 정제해 "핵심 요약 + 관점별 활용법(투자/취업/경제…)"을 자식 노드로 제공(ADR-0008). 키 미설정 시 휴리스틱 그래프로 폴백(지출 0).
 > · **BE+FE 리팩토링 패스 완료(PR #33–#37)**: 리팩토링 기회 망라 감사 워크플로(영역별 병렬 분석 → 적대적 검증) → 검색상태 판별유니온 합성·그래프빌더 전략 디스패처·캐시/HTTP 견고성·매직넘버 상수화·에러 zod 일관화 등 **확정 8건** 처리. **➡️ 다음 단계 = 최적화**(번들 분할·메모이제이션·렌더 비용; 감사 거부 목록에 후보 집적).
 > · **배포 구성 준비(ADR-0009)**: web→Vercel · api→Render 분리 + 런북([`DEPLOYMENT.md`](./DEPLOYMENT.md)) + 레포 루트 `render.yaml`(API 전용, 시크릿 전부 `sync:false`) + `tsx` 런타임 의존성 이동. **배포는 미실행 — 설정만 준비**(실제 배포는 대시보드에서 키 입력 + 연결 순서 따라).
-> · **BM 방향 확정(ADR-0010·0011)**: 제품은 **모든 주제(broad) 유지**, 수익은 **"활용 관점(의도)축"으로 점진적 좁힘**. 첫 과금 = **프로슈머 freemium**(검색·탐색·공유=무료 / 저장·내보내기·모니터링·워터마크제거·LLM 무제한·심층=Pro). 하이브리드 계정(검색 익명·저장 로그인). 해자=지능레이어+저장워크플로. 무료 LLM=일 5건+**2단캐시(데이터30분/리포트7일)**+시드프리웜+서킷+스파이크보험. 가격 베타 ₩6,900→정상 ₩9,900. 경계표=[GTM §7.2](./GTM.md)·계측=[GTM §6.1](./GTM.md)·라이선스 게이트=[DATA-SOURCING §11](./DATA-SOURCING.md). **진행**: 캐시2단+프리웜 머지(#45) · PRD/GTM 의도축 정렬(#46) · **모니터링/알림 설계 확정([ADR-0012](./adr/0012-monitoring-alerts.md)·[FEATURE-MONITORING](./FEATURE-MONITORING.md))** · **LLM 예산 서킷 브레이커 머지(#48, [ADR-0013](./adr/0013-llm-budget-circuit-breaker.md))** · **네이버 약관 확인 완료 → 검색결과 상업·재가공·저장 불가 확정 → 소스 라이선스 분리([ADR-0014](./adr/0014-source-license-segmentation.md))**: 네이버·카카오=무료 표시·단순캐시 전용(Layer A) / 수익화·재가공·저장·모니터링=위키 등 상업 OK 소스(Layer B)만. **완료: 소스 레이어 분리(LAYER-SPLIT #51)·PIPA 민감정보 필터 고도화(#55). 다음: ① DELETION-RIGHTS(삭제·잊힐 권리 — M1 출시 하드게이트) ② 상업 OK 보강 소스(공공데이터·Tavily — 수익화 레이어 한국어 커버리지) ③ Phase 0 계측 ④ 모니터링/알림(M2, 보안 검증 게이트).**
+> · **BM 방향 확정(ADR-0010·0011)**: 제품은 **모든 주제(broad) 유지**, 수익은 **"활용 관점(의도)축"으로 점진적 좁힘**. 첫 과금 = **프로슈머 freemium**(검색·탐색·공유=무료 / 저장·내보내기·모니터링·워터마크제거·LLM 무제한·심층=Pro). 하이브리드 계정(검색 익명·저장 로그인). 해자=지능레이어+저장워크플로. 무료 LLM=일 5건+**2단캐시(데이터30분/리포트7일)**+시드프리웜+서킷+스파이크보험. 가격 베타 ₩6,900→정상 ₩9,900. 경계표=[GTM §7.2](./GTM.md)·계측=[GTM §6.1](./GTM.md)·라이선스 게이트=[DATA-SOURCING §11](./DATA-SOURCING.md). **진행**: 캐시2단+프리웜 머지(#45) · PRD/GTM 의도축 정렬(#46) · **모니터링/알림 설계 확정([ADR-0012](./adr/0012-monitoring-alerts.md)·[FEATURE-MONITORING](./FEATURE-MONITORING.md))** · **LLM 예산 서킷 브레이커 머지(#48, [ADR-0013](./adr/0013-llm-budget-circuit-breaker.md))** · **네이버 약관 확인 완료 → 검색결과 상업·재가공·저장 불가 확정 → 소스 라이선스 분리([ADR-0014](./adr/0014-source-license-segmentation.md))**: 네이버·카카오=무료 표시·단순캐시 전용(Layer A) / 수익화·재가공·저장·모니터링=위키 등 상업 OK 소스(Layer B)만. **완료: 소스 레이어 분리(LAYER-SPLIT #51)·PIPA 민감정보 필터 고도화(#55)·공공데이터포털 어댑터([ADR-0015](./adr/0015-publicdata-corp-source.md) — Layer B 한국어 깊이 보강). 다음: ① DELETION-RIGHTS(삭제·잊힐 권리 — M1 출시 하드게이트) ② Tavily 등 추가 상업 OK 소스(트래픽 후) ③ Phase 0 계측 ④ 모니터링/알림(M2, 보안 검증 게이트).**
 
 ## 🔜 다음 작업 — 콜드스타트 단일 기준점 (2026-06-28)
 
-> **새 세션은 이 절부터.** 완료된 키스톤은 §8·ADR·메모리로 이관(LAYER-SPLIT=ADR-0014 게이트 #51 · PIPA 민감정보 필터 고도화 #55). **남은 M1 출시 하드게이트 = DELETION-RIGHTS.** 실행 명세 = [BACKLOG NOW#1](./BACKLOG.md).
+> **새 세션은 이 절부터.** 완료된 키스톤은 §8·ADR·메모리로 이관(LAYER-SPLIT=ADR-0014 게이트 #51 · PIPA 민감정보 필터 고도화 #55 · PUBLICDATA-ADAPTER=ADR-0015, 배포 리포트 부실 → Layer B 깊이 보강). **남은 M1 출시 하드게이트 = DELETION-RIGHTS.** 실행 명세 = [BACKLOG NOW#1](./BACKLOG.md).
 
 ### ▶ 다음 작업 = DELETION-RIGHTS (삭제·잊힐 권리 요청 경로) — M1 Exit④ 하드게이트
 **왜**: 실프로덕션 배포 전 필수(골든룰·PIPA). 노력 M. 실행 명세 = [BACKLOG NOW#1](./BACKLOG.md).
@@ -32,12 +32,12 @@
 
 ### 그 다음 (의존 순서 — 예정)
 - **DOCS-REALIGN**(S): PRD §4.1/§5.4·GTM §7.2·DATA-SOURCING §2/§3.1·STATUS §1/§4를 Layer A/B로 정렬, ADR-0011/0012·FEATURE-MONITORING §7의 '네이버 약관 미확인'·'서킷 미구현' stale 문구 정리(#48·ADR-0014로 종결됨).
-- **HTTP-POST**(S, `lib/http.ts` safeFetch POST+body) → **PUBLICDATA-ADAPTER**(M, Layer B 우선) · **TAVILY-ADAPTER**(M, Layer B·유료, HTTP-POST 의존) — 무료 Layer B 한국어 깊이 보강(아래 참고).
+- ✅ **PUBLICDATA-ADAPTER 완료**(ADR-0015 — 공공데이터포털 금융위 기업기본정보, Layer B). 잔여: **HTTP-POST**(S, `lib/http.ts` safeFetch POST+body) → **TAVILY-ADAPTER**(M, Layer B·유료, HTTP-POST 의존) — 추가 Layer B 한국어 깊이(트래픽 후).
 - **SHARED-LAYER-CONTRACT**(S, M2 저장보드) · **PHASE0-INSTR**(M, 의도축 계측 GTM §6.1) · **SUPABASE-AUTH**(L, M2) → **MONITORING**(L, M2 마지막, Layer B 전용 소비).
 
 ### Layer B 신규 소스 도입 참고 (한국어/시의성 깊이 보전)
 LAYER-SPLIT 직후 무료 Layer B가 사실상 위키뿐 → 리포트 입력 ~8건으로 얇아짐(ADR-0014 인지 트레이드오프). 보강:
-- **공공데이터포털(우선)**: 금융위 기업기본정보(데이터셋 15043184), '이용허락범위 제한 없음'(상업 OK)·무료·구조화 기업 사실데이터. 호출 호스트 `apis.data.go.kr`(포털 `data.go.kr`과 다름 → SSRF allowHosts 별도 추가). 키=`DATA_GO_KR_SERVICE_KEY`(쿼리 serviceKey, **이중 인코딩 함정**=Decoding키 사용). items 단건이 객체로 옴 → zod preprocess 배열 정규화. GET이라 HTTP-POST 불요. API별 상업가부 제각각 → 데이터셋별 약관확인+ADR.
+- ✅ **공공데이터포털(완료 — ADR-0015)**: 금융위 기업기본정보(데이터셋 15043184, `getCorpOutline_V2`), '이용허락범위 제한 없음'(상업 OK)·무료·구조화 기업 사실데이터. 호출 호스트 `apis.data.go.kr`(SSRF allowHosts 등록). 키=`DATA_GO_KR_SERVICE_KEY`(**Decoding키** 사용 — 어댑터가 1회 인코딩). 단건 `items.item` 객체화·crno 최신 basDt 접기·best-match 단건 emit·PII 보수(대표자명·전화 제외, 비개인 법인 사실만). **⚠️ 키 발급 후 라이브 검증 1건**: `basDt` 필수 여부·단건 객체화·`resultType=json`(미충족 시 빈결과 폴백 — 무해).
 - **Tavily(후순위·유료 종량 $0.008/credit, 무료 1,000/월·무카드)**: POST `api.tavily.com/search`(→ HTTP-POST 선행). 키=`TAVILY_API_KEY`(Bearer). search_depth=basic·max_results 소량·rate limiter로 비용 상한. **응답 results[].url은 서버 재요청 금지**(저장·표시만; 본문 필요시 /extract 위임). 7일 캐시·저장보드 보관 가부는 약관 정독 게이트(zero data retention ≠ 우리측 캐시 허용).
 - 두 소스 모두 키 게이트(naver 패턴) → 키 없으면 registry 자동 제외(무료 운영 기본 비활성). 신규 SourceType('publicdata'/'websearch')은 packages/shared 계약 변경 → FE 합의 후.
 
@@ -69,6 +69,7 @@ LAYER-SPLIT 직후 무료 Layer B가 사실상 위키뿐 → 리포트 입력 ~8
 | `wikipedia` | ✅ 동작 | 키 불필요 (ko.wikipedia REST) |
 | `naver` | ✅ 동작 | `.env`에 키 입력됨(로컬). webkr+news+**blog+cafe+kin**(헤더 인증). 일일 25k콜 전 엔드포인트 공유 |
 | `kakao` | ⏸️ 키대기 | 다음 web/blog/cafe — 국내 커뮤니티 색인 보완(ADR-0007). `KAKAO_REST_API_KEY` 입력 시 자동 활성 |
+| `publicdata` | ⏸️ 키대기 | 공공데이터포털 금융위 기업기본정보(데이터셋 15043184·상업 OK·**Layer B**). `DATA_GO_KR_SERVICE_KEY`(Decoding키) 입력 시 자동 활성 → LLM 리포트 입력에 기업 사실 합류. ADR-0015 |
 | 광범위 웹검색 | ⏸️ 보류 | 구글=신규고객 영구차단(공식), Brave=2026-02 무료폐지(카드필수). 재도입 1순위 Tavily(무료 1k). ADR-0005(0003 대체) |
 | SNS(X·인스타·페북) | ⏸️/❌ 보류 | X=유료(읽기 $0.005/post, ~$30~100/월), 인스타=법인 Business Verification+앱심사, 페북=공개글 키워드 검색 API 부재. ADR-0007 |
 

@@ -19,3 +19,4 @@
 | [0012](./0012-monitoring-alerts.md) | 모니터링/알림: 주제+의도 구독·지문 기반 변화감지·이메일+인앱 (Pro) | Accepted |
 | [0013](./0013-llm-budget-circuit-breaker.md) | LLM 예산 자동 상한(서킷 브레이커): 누적 추정비용 상한 도달 시 자동 폴백 | Accepted |
 | [0014](./0014-source-license-segmentation.md) | 소스 라이선스 분리: 무료 표시(네이버·카카오) vs 수익화·재가공(상업 OK 소스) | Accepted |
+| [0015](./0015-publicdata-corp-source.md) | 공공데이터포털(금융위 기업기본정보) Layer B 소스 도입 — 무료 LLM 리포트 깊이 보강 | Accepted |

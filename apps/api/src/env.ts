@@ -44,6 +44,10 @@ export const EnvSchema = z.object({
   NAVER_CLIENT_SECRET: optionalSecret,
   // 카카오(다음) 검색 API — 국내 커뮤니티 커버리지 보완(미설정 시 kakao 어댑터 비활성).
   KAKAO_REST_API_KEY: optionalSecret,
+  // 공공데이터포털(data.go.kr) 서비스 키 — Layer B 한국어 기업 사실데이터(ADR-0015).
+  // 미설정 시 publicdata 어댑터 자동 비활성. ⚠️ 이중 인코딩 함정: 포털의 'Decoding' 키를 넣을 것
+  // (어댑터가 encodeURIComponent로 한 번만 인코딩한다 — Encoding 키를 넣으면 %가 이중 인코딩됨).
+  DATA_GO_KR_SERVICE_KEY: optionalSecret,
   // Claude 분석 리포트(활용 관점). 미설정 시 LLM 분석 비활성 → 기존 휴리스틱 그래프로 폴백(지출 0).
   ANTHROPIC_API_KEY: optionalSecret,
   /** 분석에 쓸 Claude 모델. 비용·품질 균형으로 Sonnet 4.6 기본(ADR-0008). */

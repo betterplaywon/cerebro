@@ -2,6 +2,7 @@ import type { SourceAdapter } from './types.js';
 import { wikipediaAdapter } from './wikipedia.js';
 import { naverAdapter } from './naver.js';
 import { kakaoAdapter } from './kakao.js';
+import { publicDataAdapter } from './publicdata.js';
 
 /**
  * 등록된 모든 어댑터. 새 소스는 여기에 추가한다.
@@ -10,9 +11,16 @@ import { kakaoAdapter } from './kakao.js';
  * 커뮤니티 직접 크롤링은 ToS·robots·인증벽 위반이라 금지(ADR-0007).
  * 광범위 웹검색(구글→Brave/Tavily)은 보류 — 무료 티어 축소로 MVP엔 부적합(ADR-0005).
  * SNS(X·인스타·페북)는 공식 API 부재·유료·승인 게이트로 보류(ADR-0007).
+ * publicdata(공공데이터포털 금융위 기업기본정보)는 Layer B 상업 OK 소스로, 네이버·카카오가
+ * 분석 입력에서 빠진 뒤(ADR-0014) Layer B 한국어 깊이를 보강한다(ADR-0015). 키 미설정 시 자동 제외.
  * (example 어댑터는 테스트 fixture 전용 — 프로덕션 레지스트리에 넣지 않는다)
  */
-const ADAPTERS: readonly SourceAdapter[] = [wikipediaAdapter, naverAdapter, kakaoAdapter];
+const ADAPTERS: readonly SourceAdapter[] = [
+  wikipediaAdapter,
+  naverAdapter,
+  kakaoAdapter,
+  publicDataAdapter,
+];
 
 export function getAllAdapters(): readonly SourceAdapter[] {
   return ADAPTERS;
