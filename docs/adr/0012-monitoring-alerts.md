@@ -3,6 +3,7 @@
 - 상태: Accepted (설계 확정 · cyber-security 적대적 검증 H1~H4 반영 · 구현 M2/M3 — 하이브리드 계정 + **비용 서킷/서브캡 선행** · 구현 직전 보안 재검증 게이트)
 - 일자: 2026-06-27
 - 관련: [FEATURE-MONITORING](../FEATURE-MONITORING.md)(상세 스펙), [ADR-0010](./0010-bm-broad-first-intent-axis.md)(의도축 BM), [ADR-0011](./0011-llm-report-cache-and-licensing-gate.md)(캐시·약관), [ADR-0008](./0008-llm-usage-report.md)(LLM 리포트), [DATA-SOURCING §11](../DATA-SOURCING.md)(라이선스 게이트), [GTM §7.2](../GTM.md)(경계)
+> ⚠️ **보완([ADR-0014](./0014-source-license-segmentation.md))**: 모니터링(재수집·지문 저장·재가공)은 **상업 OK 소스(Layer B)만**. 네이버/카카오는 무료 표시 전용이라 모니터링 대상에서 제외.
 
 ## 맥락
 BM에서 모니터링/알림을 **"의도축 정점 레버"**(일회성 검색 → 지속 의도 = 리텐션·해자, 고지불의향 의도=투자·취업·평판)로 지목했다(ADR-0010, GTM §7.2). 설계 제약: ① 카카오/네이버 약관상 API 스니펫 장기저장 금지(ADR-0011) ② PIPA(지속 모니터링=프로파일링 우려) ③ 비용(주기적 LLM 호출은 구독수×체크수로 폭증) ④ 계정 선행(하이브리드 계정 M2).

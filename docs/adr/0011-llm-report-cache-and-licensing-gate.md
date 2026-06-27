@@ -3,6 +3,7 @@
 - 상태: Accepted (무료 단계 즉시 적용 · 구현 = `feat/llm-report-cache-prewarm` · 유료화 게이트는 M3)
 - 일자: 2026-06-27
 - 관련: [ADR-0008](./0008-llm-usage-report.md)(LLM 리포트·예산 $8.8), [ADR-0010](./0010-bm-broad-first-intent-axis.md)(BM 방향), [DATA-SOURCING §11](../DATA-SOURCING.md)(라이선스 게이트), [BACKLOG](../BACKLOG.md)(NOW#3 서킷 브레이커)
+> ⚠️ **보완([ADR-0014](./0014-source-license-segmentation.md))**: 7일 리포트 캐시·프리웜은 **상업 OK 소스(Layer B) 산출물만**. 네이버/카카오 검색 데이터는 30분 단순 캐시만(재가공·장기저장 불가).
 
 ## 맥락
 비용이 드는 **유일한 지점은 LLM 활용 리포트**(검색당 $0.03~0.05). 그래프 데이터(공식 API 수집)는 쿼터만 소모(무료). 현재 캐시는 **전체 GraphSnapshot(데이터+리포트)을 30분 단일 캐시**(`CACHE_TTL_MS`)로 묶는다(`search-orchestrator.ts`) → 인기 주제도 30분마다 LLM 재호출. 예산 $8.8 ≈ fresh 175~290건으로 너무 작아 무료 LLM을 의미 있게 서빙하기 어렵다(ADR-0008).
