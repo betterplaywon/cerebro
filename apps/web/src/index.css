@@ -153,12 +153,47 @@ body {
   cursor: not-allowed;
 }
 
-/* ───────── Cerebro Loader (회색 실루엣이 스쳐 지나감) ───────── */
+/* ───────── Cerebro Loader (시네마틱 R3F 군중 — 한 인물에서 줌아웃해 군중으로) ───────── */
 .cerebro-loader {
+  position: absolute;
+  inset: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
+  justify-content: center;
+  overflow: hidden;
+  /* 캔버스가 로드되기 전/후 모두를 받쳐주는 다크 시네마틱 백드롭 */
+  background:
+    radial-gradient(60% 50% at 50% 45%, rgba(40, 90, 180, 0.12), transparent 70%),
+    linear-gradient(160deg, #050a17 0%, #04060f 55%, #02030a 100%);
+}
+
+/* 무대 — 시네마틱 캔버스(또는 폴백 셸)가 채우는 영역 */
+.cerebro-loader__stage {
+  position: absolute;
+  inset: 0;
+}
+
+/* WebGL 캔버스: 가볍게 페이드인해 갑작스런 등장을 막는다 */
+.cerebro-scene__canvas {
+  animation: cerebroFadeIn 0.9s ease both;
+}
+
+@keyframes cerebroFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* CSS 폴백 셸(boot/static)은 무대 중앙에 정렬 */
+.cerebro-shell {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cerebro-field {
@@ -241,9 +276,27 @@ body {
 }
 
 .cerebro-loader__label {
-  color: var(--muted);
-  letter-spacing: 0.04em;
+  position: absolute;
+  bottom: clamp(1.5rem, 6vh, 4rem);
+  left: 50%;
+  transform: translateX(-50%);
   margin: 0;
+  z-index: 1;
+  color: var(--fg);
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  text-shadow: 0 0 18px rgba(124, 246, 255, 0.45);
+  animation: labelPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes labelPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.95;
+  }
 }
 
 /* ───────── Detail panel ───────── */
@@ -576,11 +629,16 @@ body {
 /* ───────── 접근성: 모션 민감 사용자 ───────── */
 @media (prefers-reduced-motion: reduce) {
   .silhouette,
-  .cerebro-core {
+  .cerebro-core,
+  .cerebro-scene__canvas,
+  .cerebro-loader__label {
     animation: none;
   }
   .silhouette {
     opacity: 0.4;
     left: calc(10% + var(--i) * 5.5%);
+  }
+  .cerebro-loader__label {
+    opacity: 0.85;
   }
 }
