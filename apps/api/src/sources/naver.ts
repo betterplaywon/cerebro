@@ -60,6 +60,7 @@ export function createNaverAdapter(deps: NaverDeps = {}): SourceAdapter {
   return {
     id: 'naver',
     sourceType: 'naver',
+    layer: 'A', // 약관상 표시·단순캐시 전용 — LLM 재가공·7일 캐시·수익화 금지. ADR-0014.
     requiresKey: true,
     isEnabled: () => Boolean(deps.clientId && deps.clientSecret),
     async collect({ query, limit = 6, signal }: CollectContext): Promise<RawItem[]> {

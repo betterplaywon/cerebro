@@ -55,6 +55,7 @@ export function createKakaoAdapter(deps: KakaoDeps = {}): SourceAdapter {
   return {
     id: 'kakao',
     sourceType: 'web',
+    layer: 'A', // 약관상 표시·단순캐시 전용 — LLM 재가공·7일 캐시·수익화 금지. ADR-0014.
     requiresKey: true,
     isEnabled: () => Boolean(deps.restApiKey),
     async collect({ query, limit = 6, signal }: CollectContext): Promise<RawItem[]> {

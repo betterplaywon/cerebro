@@ -11,6 +11,7 @@ function enc(s: string): string {
 export const exampleAdapter: SourceAdapter = {
   id: 'example',
   sourceType: 'web',
+  layer: 'B', // 테스트 fixture — 분석 가능한 1차 소스를 대역(Layer B). 프로덕션 레지스트리 미포함.
   requiresKey: false,
   isEnabled: () => true,
   collect(ctx: CollectContext): Promise<RawItem[]> {

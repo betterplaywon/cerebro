@@ -37,8 +37,11 @@ export async function collectAll(
       // 위험 스킴(javascript:/data: 등) 링크는 계약 유입 전에 차단
       for (const raw of result.value) {
         if (!isHttpUrl(raw.url)) continue;
-        // 항목별 sourceType이 있으면 우선(네이버 blog/cafe/kin 등 멀티-엔드포인트 어댑터)
-        items.push(normalize(raw, raw.sourceType ?? adapter.sourceType, `src-${idx}`, collectedAt));
+        // 항목별 sourceType이 있으면 우선(네이버 blog/cafe/kin 등 멀티-엔드포인트 어댑터).
+        // layer는 항목별 오버라이드 없이 어댑터 단위로 전파(단일 진실원, ADR-0014).
+        items.push(
+          normalize(raw, raw.sourceType ?? adapter.sourceType, adapter.layer, `src-${idx}`, collectedAt),
+        );
         idx += 1;
       }
     } else {

@@ -12,18 +12,23 @@
 
 > **새 세션은 이 절부터.** 근거: 코드 그라운드트루스 감사 + 의존순서 설계 + 적대적 검증(7-에이전트 워크플로). 키스톤 실행명세 = [BACKLOG NOW#1](./BACKLOG.md).
 
-### ⚠️ 현재 코드가 ADR-0014를 능동적으로 위반 중 — 최우선 해소
-`apps/api/src/analyze/report.ts:139-141`이 네이버·카카오(Layer A) 스니펫을 출처유형 구분 없이 신뢰도순 상위 18건(`MAX_SOURCES`=18, report.ts:40)으로 Claude에 전송하고, 그 파생 리포트가 **7일 reportCache**에 적재된다. [ADR-0014](./adr/0014-source-license-segmentation.md)(네이버·카카오=표시 전용·재가공/장기저장 금지) 위반 = PIPA 골든룰급 부채. **키스톤(LAYER-SPLIT)이 이를 멈춘다.**
-근본 원인: 정규화 후 provenance 소실 — `SourceType` enum이 제공자(naver)와 콘텐츠유형(blog/web)을 혼재해 네이버-blog와 카카오-blog가 동일 `type='blog'`, 카카오-web과 (향후)Tavily-web이 동일 `type='web'`. **`Source.type`만으로는 Layer A를 식별·필터할 수 없다** → 명시적 `layer` 태그 도입이 전제.
+### ✅ LAYER-SPLIT 완료 — ADR-0014 능동 위반 해소(2026-06-27, 브랜치 `security/source-layer-split`)
+이전 위반(`report.ts`가 네이버·카카오 Layer A 스니펫을 Claude에 보내고 7일 캐시에 적재)을 **단일 게이트로 차단**했다. 구현 요지(상세=[ADR-0014 §구현](./adr/0014-source-license-segmentation.md)):
+- `SourceAdapter.layer:'A'|'B'`(단일 진실원) → `normalize()` 전파 → `NormalizedItem.layer`.
+- `report.ts`가 LLM 입력 직전 `items.filter(i=>i.layer==='B')`, 0건이면 `null`(휴리스틱 폴백). **LLM 입력·인용·7일 캐시가 모두 Layer B로 정합.**
+- `dedup`은 동일 URL A/B 충돌 시 B 보존. 공유 계약 미변경(내부 타입만).
+- **정책 결정**: `build.ts`의 Layer A 파생 concept/category 노드는 **휘발성 표시로 허용**(≤30분, 원문은 무수정 노출 — 약관 §2.1 준수). 근거=ADR-0014 §정책 결정.
+- **잔여 위험(수락)**: LLM 산출물 PII는 프롬프트 가드 의존 → 출력측 재마스킹은 PII-FILTER와 함께. 무료 Layer B 빈약(위키 위주) → 공공데이터/Tavily로 보강.
+- 게이트: typecheck·lint·test(255)·build 그린. report/build/orchestrator/dedup 테스트 전부 통과 + 레이어 게이트 단위테스트 추가.
 
 ### 권장 착수 순서 (의존 그래프)
-1. **LAYER-SPLIT** (키스톤 · BE · M) — 모든 후속의 선행. 상세=[BACKLOG NOW#1](./BACKLOG.md).
-2. **PII-FILTER**(BACKLOG NOW#2) · **DELETION-RIGHTS**(BACKLOG NOW#3) — LAYER-SPLIT와 독립·병행 가능. DELETION-RIGHTS는 실프로덕션 배포 전 하드게이트(M1 Exit④).
+1. ✅ **LAYER-SPLIT** (키스톤) — 완료. 후속의 선행 정합 기반 확보.
+2. **PII-FILTER**(BACKLOG NOW#2) · **DELETION-RIGHTS**(BACKLOG NOW#3) — LAYER-SPLIT와 독립·병행 가능. DELETION-RIGHTS는 실프로덕션 배포 전 하드게이트(M1 Exit④). PII-FILTER는 LLM 출력측 재마스킹 잔여위험도 함께 검토.
 3. **DOCS-REALIGN** (S) — PRD §4.1/§5.4·GTM §7.2·DATA-SOURCING §2/§3.1·STATUS §1/§4를 Layer A/B로 정렬, ADR-0011/0012·FEATURE-MONITORING §7의 '네이버 약관 미확인'·'서킷 미구현' stale 문구 정리(#48·ADR-0014로 종결됨).
 4. **HTTP-POST**(S, `apps/api/src/lib/http.ts` safeFetch POST+body 지원) → **PUBLICDATA-ADAPTER**(M, Layer B 우선) · **TAVILY-ADAPTER**(M, Layer B 후순위·유료, HTTP-POST 의존).
 5. **SHARED-LAYER-CONTRACT**(S, M2 저장보드 필요 시) · **PHASE0-INSTR**(M, 의도축 계측 GTM §6.1) · **SUPABASE-AUTH**(L, M2) → **MONITORING**(L, M2 마지막, Layer B 전용 소비).
 
-### 🔴 키스톤(LAYER-SPLIT) 착수 시 반드시 반영 (적대적 검증 발견)
+### ✅ 키스톤(LAYER-SPLIT) 적대적 검증 항목 — 모두 반영 완료 (이력)
 - **단일 진실원** = `SourceAdapter.layer:'A'|'B'`(sources/types.ts:30-36). naver/kakao='A', wikipedia='B'. → `normalize()` 시그니처에 layer 인자 → `NormalizedItem.layer` 보존(orchestrator.ts:41에서 adapter.layer 전달) → report.ts:139 직전 `items.filter(i=>i.layer==='B')`, 0건이면 `return null`(휴리스틱 폴백). 이 한 게이트로 LLM 입력·7일 캐시·인용(usage sourceIds)이 정합.
 - **(필수)** layer 필수화는 기존 테스트를 깨뜨린다 — `report.test.ts`의 sampleItems()가 전부 `naver`(Layer A)라 필터 도입 시 analyzeUsage가 null → 테스트 실패. **픽스처를 wikipedia(Layer B)로 전환** + `build.test.ts:61`·orchestrator 호출부 갱신. 수용기준에 "필터 도입 후 report/build/orchestrator 테스트 전부 그린" 명시.
 - **(정책 결정)** `build.ts:159-213`이 Layer A 제목·스니펫을 토큰화해 concept/category 파생노드를 만든다(ADR-0014 §2.1 '무수정 독립노출'과 긴장). 30분·표시라 저위험이나 키스톤 머지 전 "Layer A는 원문 출처노드만 vs 파생 허용"을 명문화('모두 자동 정합'은 30분 스냅샷 재가공을 누락한 과장).

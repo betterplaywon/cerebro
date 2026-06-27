@@ -31,3 +31,22 @@
 
 ## 영향
 - ADR-0010: 수익화는 Layer B 소스 위에서만. ADR-0011: 7일 리포트 캐시·프리웜은 Layer B 산출물만(네이버/카카오는 30분 단순 캐시 유지). ADR-0012: 모니터링은 Layer B 소스만. DATA-SOURCING §11 갱신.
+
+## 구현 — LAYER-SPLIT 키스톤 (2026-06-27)
+수집 파이프라인에 레이어 태그를 도입해 위 결정을 코드로 강제했다(이전엔 `report.ts`가 네이버·카카오 스니펫을 LLM에 보내고 7일 캐시에 적재 = 능동적 위반).
+
+- **단일 진실원 = 어댑터**: `SourceAdapter.layer:'A'|'B'`(`sources/types.ts`). 위키=`B`, 네이버·카카오=`A`. `SourceType`(naver/blog/web)은 제공자·콘텐츠유형이 혼재해 라이선스 식별 불가(네이버-blog와 카카오-blog가 동일 'blog')라 별도 태그가 필요했다.
+- **전파**: `normalize(raw, type, layer, id, collectedAt)` → `NormalizedItem.layer`. 프로덕션 호출부(`orchestrator.ts`)가 `adapter.layer`를 어댑터 단위로 전달(항목별 오버라이드 없음).
+- **단일 게이트**: `report.ts`가 LLM 입력·정렬 직전 `items.filter(i=>i.layer==='B')`, 0건이면 `null`(휴리스틱 폴백, 지출 0). 이 한 줄로 **LLM 입력(sourceLines)·인용(usage sourceIds)·7일 리포트 캐시**가 모두 Layer B로 정합(top이 곧 캐시·인용의 출처이므로).
+- **dedup**: 동일 URL이 A/B로 충돌하면 분석 가능한 **B를 보존**(`dedup.ts`) — 같은 콘텐츠를 상업 OK 소스로도 확보했다면 표시 전용 A 중복에 밀리지 않게.
+- 공유 계약(`packages/shared`)은 미변경 — `layer`는 내부 타입(`NormalizedItem`/`SourceAdapter`)에만. FE 노출(저장 보드)이 필요할 때 SHARED-LAYER-CONTRACT로 별도 도입(M2).
+
+### 정책 결정 — Layer A 파생 표시 노드 허용(§2.1 '무수정 독립노출'과의 긴장)
+`build.ts`는 Layer A(네이버·카카오) 제목·스니펫을 토큰화해 concept/category **파생 노드**를 만든다. 결정: **휘발성 표시로 허용한다.**
+- 검색결과 **원문(제목·URL·스니펫)은 출처 노드/출처 목록으로 무수정·독립 노출**(§2.1 준수). 파생 concept/category 노드는 키워드 빈도 기반 **네비게이션 오버레이**일 뿐 원문을 변형 표시하지 않는다.
+- 이 파생은 **≤30분 스냅샷 캐시 내 일시적 화면 렌더링**으로, 약관이 금지하는 **상업적 재가공·장기저장·재배포**가 아니다(약관이 허용하는 '부하용 단순 캐시 ≤30분' 범위). 무료 휴리스틱 그래프(네이버 비중 큼)의 품질을 보존하기 위한 트레이드오프.
+- 대안(Layer A는 원문 출처 노드만): 더 보수적이나 무료 그래프가 사실상 위키만 남아 빈약 → 기각.
+
+### 잔여 위험(수락)
+- **LLM 산출물 PII**: 입력측 `redactSensitive`는 수집 스니펫에만 적용되고, Claude가 생성하는 `summary`/`angles[].report`의 PII는 범위 밖 → 현재는 `report.ts` 프롬프트 가드(공인·공개정보 한정, 민감정보 생성·추론 금지)에만 의존. 출력측 재마스킹은 PII-FILTER(BACKLOG NOW#2)와 함께 도입 검토.
+- **무료 Layer B 빈약**: LLM 입력이 사실상 위키뿐 → 리포트 입력이 얇아짐. 보강 = 공공데이터포털·Tavily(Layer B) 후속 도입.
