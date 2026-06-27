@@ -11,6 +11,7 @@ export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
   sns: 'SNS',
   wikipedia: '위키백과',
   official: '공식',
+  publicdata: '공공데이터',
   web: '웹',
 };
 

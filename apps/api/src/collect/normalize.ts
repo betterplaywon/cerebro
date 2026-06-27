@@ -52,6 +52,7 @@ export function tokenize(text: string): string[] {
 
 const BASE_CONFIDENCE: Partial<Record<SourceType, number>> = {
   official: 0.9,
+  publicdata: 0.88, // 정부·공공 구조화 사실데이터(공공데이터포털) — 위키 위 권위. ADR-0015.
   wikipedia: 0.85,
   naver: 0.7,
   google: 0.7,
