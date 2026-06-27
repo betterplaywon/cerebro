@@ -11,12 +11,30 @@ const optionalSecret = z.preprocess(
   z.string().optional(),
 );
 
-const EnvSchema = z.object({
+/** env의 boolean 플래그. 문자열만 들어오므로 truthy 토큰만 true, 그 외(빈값/미설정 포함)는 false. */
+const booleanFlag = z.preprocess((v) => {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') return ['1', 'true', 'yes', 'on'].includes(v.trim().toLowerCase());
+  return false;
+}, z.boolean());
+
+export const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8787),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
-  /** 검색 결과 캐시 TTL(ms). 무료 운영 핵심 — 기본 30분 */
+  /** 검색 결과(스냅샷=데이터+리포트) 캐시 TTL(ms). 신선도·쿼터·핫패스 — 기본 30분 */
   CACHE_TTL_MS: z.coerce.number().int().positive().default(1000 * 60 * 30),
+  /**
+   * LLM 활용 리포트 캐시 TTL(ms). 스냅샷과 분리된 2단 캐시(ADR-0011) — 기본 7일.
+   * 데이터는 매번 신선하게 재수집하되, 비싼 LLM 리포트는 길게 재사용해 호출을 30분→7일당 1회로 격감.
+   */
+  REPORT_CACHE_TTL_MS: z.coerce.number().int().positive().default(1000 * 60 * 60 * 24 * 7),
+  /**
+   * 기동 시 시드 쿼리 프리웜 실행 여부(ADR-0011). 기본 OFF.
+   * ⚠️ 인메모리 캐시 + Render 무료 spin-down → 콜드스타트마다 프리웜 재실행 = 재호출 비용.
+   * 영속 캐시/안정 인스턴스에서만 ON 권장.
+   */
+  PREWARM_ON_START: booleanFlag.default(false),
   // 키 필요 소스(미설정 시 해당 어댑터 자동 비활성). 값은 .env에서만 주입.
   NAVER_CLIENT_ID: optionalSecret,
   NAVER_CLIENT_SECRET: optionalSecret,
