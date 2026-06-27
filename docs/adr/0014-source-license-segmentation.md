@@ -49,6 +49,6 @@
 - 대안(Layer A는 원문 출처 노드만): 더 보수적이나 무료 그래프가 사실상 위키만 남아 빈약 → 기각.
 
 ### 잔여 위험(수락)
-- **LLM 산출물 PII**: 입력측 `redactSensitive`는 수집 제목·스니펫에만 적용되고, Claude가 생성하는 `summary`/`angles[].report`의 PII는 범위 밖 → 현재는 `report.ts` 프롬프트 가드(공인·공개정보 한정, 민감정보 생성·추론 금지)에만 의존. 출력측 재마스킹은 PII-FILTER(BACKLOG NOW#2)와 함께 도입 검토.
+- **LLM 산출물 PII**: ✅ **출력측 재마스킹 도입**(`security/pii-filter-hardening`) — `report.ts`가 `summary`/`hook`/`report`에 `redactSensitive`를 적용해 표시·7일 캐시 적재 전 한 번 더 거른다(프롬프트 가드에 더한 방어). 단 정규식 범위(주민·외국인등록번호·전화·이메일·카드)만 — 자유서술형(주소·건강 등)은 여전히 프롬프트 가드 의존.
 - **무료 Layer B 빈약**: LLM 입력이 사실상 위키뿐 → 리포트 입력이 얇아짐. 보강 = 공공데이터포털·Tavily(Layer B) 후속 도입.
 - **중심 노드 출처 칩 정합(저위험)**: `build.ts` 중심(요약) 노드의 출처 칩(`sources.slice(0,3)`)은 Layer A 링크를 포함할 수 있다(요약 텍스트 자체는 Layer B 산출물). LLM·7일 캐시 미유입·≤30분 표시뿐이라 3대 누출 벡터(LLM 입력·장기저장·인용) 밖이나, 엄격한 출처 정합이 필요하면 중심 노드가 Layer B 출처만 인용하도록 후속 보강(build.ts에 layer 전달).

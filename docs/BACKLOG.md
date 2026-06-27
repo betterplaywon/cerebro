@@ -6,9 +6,9 @@
 
 ## 🥇 다음 세션 첫 작업 (Top Pick)
 
-**[pipa-sensitive-filter-hardening] PIPA/민감정보 필터 고도화 — 외국인등록번호·이메일·카드(Luhn) 마스킹 (M1 출시 하드게이트)**
+**[data-deletion-request-flow] 삭제(잊힐 권리) 요청 경로 — 차단목록 + 요청 채널/고지 + 런북 (M1 Exit④ 하드게이트)**
 
-ADR-0014 소스 레이어 분리(키스톤)는 **✅ 완료**(브랜치 `security/source-layer-split` — `report.ts`가 LLM 입력·7일 캐시·인용을 `items.filter(layer==='B')`로 게이트, 단일 진실원=`SourceAdapter.layer`). 다음 최우선은 M1 출시 하드게이트다. `pii.ts`의 redactSensitive가 주민번호·휴대전화 2종만 마스킹해 외국인등록번호·이메일이 실측상 그대로 통과한다(상세=NOW#1). LLM 호출 0·외부키 0·계약변경 0이라 비용 대비 안전성 이득이 크다. **병행 가능한 독립 게이트** = data-deletion-request-flow(NOW#2, 실배포 전 하드게이트). LAYER-SPLIT의 잔여위험(LLM 산출물 PII 출력측 재마스킹)도 이 작업과 함께 검토 권고.
+LAYER-SPLIT(✅ PR #51)·PIPA 민감정보 필터 고도화(✅ 브랜치 `security/pii-filter-hardening` — 외국인등록번호·이메일·카드 Luhn 마스킹 + LLM 산출물 출력측 재마스킹)에 이어 남은 M1 출시 하드게이트다. ⚠️ **적대적 검증 추가요건**: blocklist 필터를 수집 경로뿐 아니라 **캐시 read 경로(스냅샷 hit·reportCache hit)에도** 적용 + **즉시 플러시(블록키 캐시 delete)** 필수 — TTL 자연만료 의존만으론 잊힐권리 미충족. 상세 = 아래 data-deletion-request-flow 항목.
 
 ## ⚠️ 통합·순서 주의 (Synthesis Notes)
 
@@ -18,7 +18,7 @@ ADR-0014 소스 레이어 분리(키스톤)는 **✅ 완료**(브랜치 `securit
 
 | 티어 | 항목 (우선순위 순) |
 |---|---|
-| **NOW** | 1. pipa-sensitive-filter-hardening · 2. data-deletion-request-flow  ·  (✅ 완료: adr0014-source-layer-split → security/source-layer-split, llm-budget-auto-cap → #48/ADR-0013) |
+| **NOW** | 1. data-deletion-request-flow  ·  (✅ 완료: pipa-sensitive-filter-hardening → security/pii-filter-hardening, adr0014-source-layer-split → security/source-layer-split, llm-budget-auto-cap → #48/ADR-0013) |
 | **NEXT** | 1. korean-tokenizer-protected-dict-expansion · 2. additional-sources-appstore-publicdata-m2 · 3. representative-seed-corpus-qa · 4. graph-entity-resolution · 5. axe-accessibility-tests · 6. youtube-data-api-adapter · 7. mobile-3d-quality-fallback · 8. 3d-node-labels-keyboard-nav · 9. cost-quota-monitoring-dashboard-m2 · 10. lighthouse-ci-perf-budget |
 | **LATER** | 1. graph-ux-filters-history-share-m2 · 2. usage-report-cache-quality-monitoring · 3. llm-usage-cost-metrics · 4. analytics-observability-m2 · 5. graph-performance-lod-budget · 6. frontend-live-data-visual-qa · 7. i18n-scaffolding-ko-only · 8. playwright-e2e-suite · 9. paid-feature-flags-m2 |
 | **DEFERRED** | 1. tavily-web-search-adapter · 2. supabase-auth-m2 · 3. korean-morphological-analyzer-eval · 4. x-twitter-source-adapter-gated · 5. reddit-source-adapter-gated · 6. instagram-source-adapter-gated |
@@ -27,7 +27,7 @@ ADR-0014 소스 레이어 분리(키스톤)는 **✅ 완료**(브랜치 `securit
 
 ## NOW · 다음 세션 즉시
 
-_**ADR-0014 컴플라이언스 게이트(소스 레이어 분리)는 ✅ 완료**(브랜치 security/source-layer-split — report.ts가 LLM 입력·7일캐시·인용을 Layer B로 게이트, 단일 진실원=SourceAdapter.layer). 다음 최우선은 M1 출시 하드게이트(PIPA 민감정보 필터·삭제요청 경로)를 닫는 것. 모두 readiness=ready·$0·외부 의존 0, 코드 검증으로 실제 공백 확인(pii.ts 외국인등록번호·이메일 미마스킹, registry 차단목록 부재). 예산 서킷 브레이커는 #48/ADR-0013으로 완료._
+_**ADR-0014 게이트(소스 레이어 분리)·PIPA 민감정보 필터 고도화는 ✅ 완료**(각 security/source-layer-split·security/pii-filter-hardening). 남은 M1 출시 하드게이트 = **삭제(잊힐 권리) 요청 경로**(registry 차단목록 부재 — 코드 검증으로 확인). readiness=ready·$0·외부 의존 0. 예산 서킷 브레이커는 #48/ADR-0013으로 완료._
 
 ### ✅ (완료 — 2026-06-27, 브랜치 `security/source-layer-split`) ADR-0014 소스 레이어 분리 — Layer A(표시)/Layer B(분석·저장) 게이트
 `id: adr0014-source-layer-split` · ✅ **완료** — `report.ts`가 LLM 입력·7일 캐시·인용을 `items.filter(layer==='B')`로 게이트(단일 진실원=`SourceAdapter.layer`). dedup A→B 보존, 공유계약 미변경, `CACHE_TTL_MS` 상한으로 Layer A 표시 ≤30분 강제, 레이어 게이트 단위·통합테스트 추가. 아래는 명세 이력.
@@ -50,8 +50,8 @@ _**ADR-0014 컴플라이언스 게이트(소스 레이어 분리)는 ✅ 완료*
 **비용**: $0(코드 변경만). LLM 입력을 Layer B로 줄여 토큰·예산에 미세 우호적.
 **후속(Layer B 한국어 보강)**: 공공데이터포털 금융위 기업기본정보(데이터셋 15043184, 상업 OK·무료, 호스트 apis.data.go.kr, 키 DATA_GO_KR_SERVICE_KEY, 이중 인코딩 주의) → NEXT#2(additional-sources)로 승격 권고. Tavily(POST·유료 종량, HTTP-POST 선행, 키 TAVILY_API_KEY) → DEFERRED#1 트리거를 '실트래픽'에서 'Layer B 한국어 커버리지 보강'으로 재정의.
 
-### 2. PIPA/민감정보 필터 고도화 (구조적 식별자 패턴 확장 + 오탐 저감)
-`id: pipa-sensitive-filter-hardening` · 노력 **M(중간)** · 🟢 착수 가능 · tier:now
+### ✅ (완료 — 2026-06-27, 브랜치 `security/pii-filter-hardening`) PIPA/민감정보 필터 고도화 (구조적 식별자 패턴 확장 + 오탐 저감)
+`id: pipa-sensitive-filter-hardening` · ✅ **완료** — `pii.ts`에 외국인등록번호(성별코드 1~8·날짜부 검증)·이메일·신용카드(Luhn) 마스킹 추가, `report.ts`에 LLM 산출물(summary/hook/report) **출력측 재마스킹**(ADR-0014 잔여위험 해소). 오탐 저감=날짜부·Luhn 검증(유선번호·임의 16자리·기사ID 보존). 회귀 코퍼스 11케이스 그린. 아래는 명세 이력.
 
 **왜**: UGC(네이버 cafe/kin·카카오) 유입으로 개인정보 노출 위험이 웹/뉴스보다 높다(ADR-0007 트레이드오프, STATUS §6). 현재 경계 가드 redactSensitive는 주민번호([1-4]만)·휴대전화 2종만 마스킹한다. node로 실측한 결과 (1)외국인등록번호(성별코드 5-8, '900101-5234567')와 (2)이메일('hong@test.com')이 그대로 통과함을 확인했다. PIPA는 골든룰이고 이 작업은 LLM 호출 0·외부키 0·계약변경 0이라 비용 대비 안전성 이득이 크다. 마스킹은 토큰화·저장·표시뿐 아니라 report.ts가 snippet을 Claude로 보내기 전 단계이므로 Anthropic에 PII가 전송되는 것도 함께 줄인다.
 

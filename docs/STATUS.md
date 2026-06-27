@@ -10,7 +10,7 @@
 
 ## 🔜 다음 작업 — 콜드스타트 단일 기준점 (ADR-0014 이후 · 2026-06-27)
 
-> **새 세션은 이 절부터.** 키스톤(LAYER-SPLIT)은 ✅ 완료(아래 §). **다음 최우선 = M1 출시 하드게이트(PII-FILTER · DELETION-RIGHTS)** — 명세 = [BACKLOG NOW](./BACKLOG.md).
+> **새 세션은 이 절부터.** 키스톤(LAYER-SPLIT)·PIPA 민감정보 필터 고도화 ✅ 완료. **다음 최우선 = DELETION-RIGHTS(삭제·잊힐 권리 경로, M1 Exit④)** — 명세 = [BACKLOG NOW](./BACKLOG.md).
 
 ### ✅ LAYER-SPLIT 완료 — ADR-0014 능동 위반 해소(2026-06-27, 브랜치 `security/source-layer-split`)
 이전 위반(`report.ts`가 네이버·카카오 Layer A 스니펫을 Claude에 보내고 7일 캐시에 적재)을 **단일 게이트로 차단**했다. 구현 요지(상세=[ADR-0014 §구현](./adr/0014-source-license-segmentation.md)):
@@ -23,7 +23,7 @@
 
 ### 권장 착수 순서 (의존 그래프)
 1. ✅ **LAYER-SPLIT** (키스톤) — 완료. 후속의 선행 정합 기반 확보.
-2. **PII-FILTER**(BACKLOG NOW#2) · **DELETION-RIGHTS**(BACKLOG NOW#3) — LAYER-SPLIT와 독립·병행 가능. DELETION-RIGHTS는 실프로덕션 배포 전 하드게이트(M1 Exit④). PII-FILTER는 LLM 출력측 재마스킹 잔여위험도 함께 검토.
+2. ✅ **PII-FILTER 완료**(security/pii-filter-hardening — 외국인등록번호·이메일·카드 Luhn + LLM 출력측 재마스킹, ADR-0014 잔여위험 해소). · **DELETION-RIGHTS**(BACKLOG NOW#1) — 실프로덕션 배포 전 하드게이트(M1 Exit④). 캐시 read 경로 게이팅 + 즉시 플러시 필수(TTL만으론 부족).
 3. **DOCS-REALIGN** (S) — PRD §4.1/§5.4·GTM §7.2·DATA-SOURCING §2/§3.1·STATUS §1/§4를 Layer A/B로 정렬, ADR-0011/0012·FEATURE-MONITORING §7의 '네이버 약관 미확인'·'서킷 미구현' stale 문구 정리(#48·ADR-0014로 종결됨).
 4. **HTTP-POST**(S, `apps/api/src/lib/http.ts` safeFetch POST+body 지원) → **PUBLICDATA-ADAPTER**(M, Layer B 우선) · **TAVILY-ADAPTER**(M, Layer B 후순위·유료, HTTP-POST 의존).
 5. **SHARED-LAYER-CONTRACT**(S, M2 저장보드 필요 시) · **PHASE0-INSTR**(M, 의도축 계측 GTM §6.1) · **SUPABASE-AUTH**(L, M2) → **MONITORING**(L, M2 마지막, Layer B 전용 소비).
@@ -124,10 +124,10 @@ curl -s localhost:8787/api/search -X POST -H 'content-type: application/json' -d
 
 > 🔧 **현재 진행 트랙 = 코드 품질.** 리팩토링 패스 완료 → **다음은 최적화**(사용자 명시). 최적화 후보(감사에서 "리팩토링 아님/최적화"로 분류돼 보류된 것들): `MindMapCanvas` 번들 ~931kB 코드분할 · `CategoryLegend`/`DetailPanel` 메모이제이션 · `DetailPanel` 출처 필터 O(n·m)→Map · 3D 렌더 비용·모바일 Bloom 저감. 아래 NOW/NEXT는 **M1 출시 게이트(제품 트랙)** — 최적화 트랙과 별개로, 출시 준비 재개 시 1번부터.
 
-**🥇 출시 트랙 첫 작업(Top Pick)**: **PIPA/민감정보 필터 고도화**(`pii.ts`에 외국인등록번호·이메일·카드(Luhn)까지 마스킹 — 실측으로 누출 확인) — $0·무의존·단일 파일.
+**🥇 출시 트랙 첫 작업(Top Pick)**: **삭제(잊힐 권리) 요청 경로**(차단목록 + 요청 채널/고지 + 런북, M1 Exit④) — PIPA 필터·LAYER-SPLIT는 ✅ 완료.
 
-**NOW**(M1 출시 하드 게이트 + 라이브 예산 안전, 셋 다 $0·즉시 착수):
-1. **PIPA/민감정보 필터 고도화** — 외국인등록번호(성별코드 5~8)·이메일·카드번호 마스킹 추가.
+**NOW**(M1 출시 하드 게이트 + 라이브 예산 안전):
+1. ✅ **PIPA/민감정보 필터 고도화 완료**(security/pii-filter-hardening) — 외국인등록번호(성별코드 1~8·날짜부 검증)·이메일·카드(Luhn) + LLM 산출물 출력측 재마스킹.
 2. **삭제(잊힐 권리) 요청 경로** — 차단목록 + 요청 채널·고지 + 런북(M1 Exit④·골든룰).
 3. ✅ **LLM 예산 자동 상한(서킷 브레이커) 구현 완료**(ADR-0013) — 인메모리 누적 추정비용이 `ANTHROPIC_BUDGET_USD`(기본 8) 도달 시 LLM 분석 자동 차단→휴리스틱 폴백(지출 0), `res.usage` 기록(refusal/빈응답 포함), 월 리셋, `GET /api/usage` 관측. ADR-0012 '비용 가드 선행 미구현' 전제를 일부 충족(모니터링 선행조건).
 
@@ -140,7 +140,7 @@ curl -s localhost:8787/api/search -X POST -H 'content-type: application/json' -d
 - 광범위 웹검색은 **보류 중**(ADR-0005): 구글 신규차단 + Brave 2026-02 무료폐지로 무료 옵션이 희소. 현재 커버리지 = 네이버(한국어) + 위키백과(백과). 글로벌/영문·교차검증은 약함 → 재도입 시 Tavily(무료 1k) 우선.
 - 그래프 토픽 = 키워드 빈도 기반(엔티티 해석 고도화는 후속).
 - **SNS 커버리지 공백**(ADR-0007): X=유료, 인스타=법인 심사, 페북=공개 검색 API 부재로 보류. 실시간 SNS 여론은 당분간 미수집.
-- **PIPA/UGC**: 커뮤니티(cafe/kin/카카오) 유입으로 개인정보 노출 위험 증가. 경계에서 주민번호·휴대전화를 마스킹(`collect/pii.ts`)하나 best-effort — "공개정보·공인 한정" 정책이 1차 방어. 민감정보 필터 고도화는 후속 과제.
+- **PIPA/UGC**: 커뮤니티(cafe/kin/카카오) 유입으로 개인정보 노출 위험 증가. 경계(`collect/pii.ts`)에서 주민·외국인등록번호(날짜부 검증)·휴대전화·이메일·신용카드(Luhn)를 마스킹하고, LLM 산출물(summary/hook/report)도 출력측 재마스킹(`report.ts`)한다. **여전히 best-effort** — 주소·금융상세·건강 등 자유서술형은 정규식 범위 밖이라 "공개정보·공인 한정" 정책 + LLM 프롬프트 가드가 1차 방어(과대표현 금지).
 
 ## 7. 운영 규칙 (필수)
 - 작업 단위 브랜치(`<type>/<설명>`) → 원자적 커밋 → PR → **CI 그린이면 squash 머지+브랜치 삭제**.

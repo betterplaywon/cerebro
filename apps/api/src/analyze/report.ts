@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { env } from '../env.js';
 import type { NormalizedItem } from '../collect/normalize.js';
+import { redactSensitive } from '../collect/pii.js';
 import type { BudgetTracker } from './budget.js';
 
 /**
@@ -175,17 +176,19 @@ export async function analyzeUsage(
 
   const parsed = AnalysisSchema.parse(JSON.parse(text));
 
+  // 출력측 재마스킹(ADR-0014 잔여위험): 입력 스니펫을 마스킹해도 LLM이 산출물에 PII를
+  // 생성·추론할 수 있다. 프롬프트 가드(SYSTEM_PROMPT)에 더해, 표시·7일 캐시 적재 전에 한 번 더 거른다.
   const angles: UsageAngle[] = parsed.angles
     .filter((a) => a.report.trim().length > 0)
     .map((a) => ({
       key: a.key as UsageAngleKey,
       label: ANGLE_LABELS[a.key as UsageAngleKey],
-      hook: a.hook,
-      report: a.report,
+      hook: redactSensitive(a.hook),
+      report: redactSensitive(a.report),
       sourceIds: a.sourceRefs
         .map((i) => top[i]?.source.id)
         .filter((id): id is string => typeof id === 'string'),
     }));
 
-  return { summary: parsed.summary, angles };
+  return { summary: redactSensitive(parsed.summary), angles };
 }
