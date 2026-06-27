@@ -9,17 +9,21 @@ const SONNET = { inputUsdPerMTok: 3, outputUsdPerMTok: 15 } as const;
 
 const NOW = '2026-06-25T00:00:00.000Z';
 
+// ADR-0014: 분석(LLM)은 Layer B(상업 OK 소스)만 입력으로 받는다 → 픽스처를 위키백과(Layer B)로 둔다.
+// (이전엔 naver=Layer A였으나, 레이어 게이트 도입 후엔 A만으론 analyzeUsage가 null이 되어 무의미.)
 function sampleItems(): NormalizedItem[] {
   return [
     normalize(
-      { title: '토스 대규모 투자 유치', url: 'https://www.yna.co.kr/view/1', snippet: '시리즈 투자' },
-      'naver',
+      { title: '토스 대규모 투자 유치', url: 'https://ko.wikipedia.org/wiki/토스', snippet: '시리즈 투자' },
+      'wikipedia',
+      'B',
       's1',
       NOW,
     ),
     normalize(
-      { title: '토스 개발자 채용 확대', url: 'https://blog.naver.com/u/1', snippet: '대규모 채용' },
-      'naver',
+      { title: '토스 개발자 채용 확대', url: 'https://ko.wikipedia.org/wiki/비바리퍼블리카', snippet: '대규모 채용' },
+      'wikipedia',
+      'B',
       's2',
       NOW,
     ),
@@ -116,6 +120,53 @@ describe('analyzeUsage', () => {
   it('안전성 거부(refusal)면 null을 반환한다', async () => {
     const { client } = mockClient('{}', 'refusal');
     expect(await analyzeUsage('토스', sampleItems(), { client })).toBeNull();
+  });
+});
+
+// ── ADR-0014 소스 레이어 게이트: LLM 입력·인용은 Layer B만(네이버·카카오=Layer A 차단) ──
+describe('analyzeUsage — ADR-0014 Layer 게이트', () => {
+  const VALID = JSON.stringify({
+    summary: '요약',
+    angles: [{ key: 'investment', hook: 'h', report: 'r', sourceRefs: [0] }],
+  });
+
+  /** 전달된 user 메시지를 포착하는 가짜 클라이언트(레이어 필터링 검증용). */
+  function capturingClient(text: string) {
+    let userContent = '';
+    const create = vi.fn(async (params: { messages: Array<{ content: string }> }) => {
+      userContent = params.messages[0]?.content ?? '';
+      return { stop_reason: 'end_turn' as Anthropic.Message['stop_reason'], content: [{ type: 'text', text }] };
+    });
+    const client = { messages: { create } } as unknown as Pick<Anthropic, 'messages'>;
+    return { client, create, getUserContent: () => userContent };
+  }
+
+  it('Layer A(네이버·카카오)만 있으면 LLM을 호출하지 않고 null 반환(지출 0)', async () => {
+    const layerAOnly: NormalizedItem[] = [
+      normalize({ title: '네이버 블로그 후기', url: 'https://blog.naver.com/u/9', snippet: '후기' }, 'blog', 'A', 'a1', NOW),
+      normalize({ title: '카카오 웹문서', url: 'https://example.com/k', snippet: '문서' }, 'web', 'A', 'a2', NOW),
+    ];
+    const { client, create } = mockClient(VALID);
+    expect(await analyzeUsage('토스', layerAOnly, { client })).toBeNull();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('Layer A/B 혼합 시 Claude 입력과 인용에 Layer B만 포함한다', async () => {
+    const mixed: NormalizedItem[] = [
+      normalize({ title: '네이버 블로그 후기', url: 'https://blog.naver.com/u/9', snippet: 'A레이어 스니펫' }, 'blog', 'A', 'a1', NOW),
+      normalize({ title: '위키 항목 본문', url: 'https://ko.wikipedia.org/wiki/X', snippet: 'B레이어 스니펫' }, 'wikipedia', 'B', 'b1', NOW),
+    ];
+    const { client, create, getUserContent } = capturingClient(VALID);
+    const result = await analyzeUsage('토스', mixed, { client });
+
+    expect(create).toHaveBeenCalledOnce();
+    const userContent = getUserContent();
+    expect(userContent).toContain('위키 항목 본문'); // Layer B는 전송
+    expect(userContent).not.toContain('네이버 블로그 후기'); // Layer A 제목 차단
+    expect(userContent).not.toContain('A레이어 스니펫'); // Layer A 스니펫 차단
+
+    // 인용(sourceIds)도 Layer B만: 필터 후 top=[b1] → sourceRefs[0] → 'b1'
+    expect(result!.angles[0]?.sourceIds).toEqual(['b1']);
   });
 });
 

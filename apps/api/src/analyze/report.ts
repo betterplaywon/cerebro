@@ -133,10 +133,17 @@ export async function analyzeUsage(
 ): Promise<UsageReport | null> {
   if (!env.ANTHROPIC_API_KEY) return null;
   if (items.length === 0) return null;
+
+  // ADR-0014 컴플라이언스 게이트: LLM 재가공·7일 리포트 캐시·인용(sourceIds)은 Layer B(상업 OK 소스)만.
+  // 네이버·카카오(Layer A)는 표시·30분 캐시 전용 — Claude로 보내거나 파생 리포트를 장기 저장하지 않는다.
+  // 이 한 줄이 LLM 입력(sourceLines)·인용·리포트 캐시를 모두 Layer B로 정합시킨다(단일 게이트).
+  const analyzable = items.filter((it) => it.layer === 'B');
+  if (analyzable.length === 0) return null; // 분석 가능한 소스가 없으면 휴리스틱 그래프로 폴백(지출 0).
+
   // 예산 소진(서킷 오픈) 시 호출하지 않고 폴백(지출 0) — '키 없음'과 동일한 null 폴백 경로.
   if (deps.budget && !deps.budget.canSpend()) return null;
 
-  const top = [...items]
+  const top = [...analyzable]
     .sort((a, b) => b.source.confidence - a.source.confidence)
     .slice(0, MAX_SOURCES);
 

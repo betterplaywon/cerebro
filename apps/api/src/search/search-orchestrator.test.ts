@@ -179,4 +179,26 @@ describe('createSearchOrchestrator (리포트 2단 캐시)', () => {
     expect(collect).toHaveBeenCalledTimes(1); // 두 번째는 스냅샷 적중 → 재수집 없음
     expect(create).toHaveBeenCalledOnce(); // LLM도 1회뿐
   });
+
+  // ADR-0014 end-to-end: Layer A 전용 수집은 LLM 미호출 + 7일 리포트 캐시 미적재여야 한다.
+  // (report.ts 게이트가 null을 반환 → readThroughReportCache의 `if(report) set` 음성 분기 검증)
+  it('Layer A 소스만이면 LLM을 호출하지 않고 7일 리포트 캐시에도 적재하지 않는다(ADR-0014)', async () => {
+    const reportCache = newReportCache();
+    const { client, create } = mockAnthropic(VALID_REPORT);
+    const layerAAdapter: SourceAdapter = { ...exampleAdapter, layer: 'A' };
+    const orchestrator = createSearchOrchestrator({
+      cache: newSnapshotCache(),
+      reportCache,
+      adapters: [layerAAdapter],
+      analyze: (q, items) => analyzeUsage(q, items, { client }),
+    });
+
+    const result = await orchestrator.search('네이버전용', undefined, NOW);
+
+    expect(create).not.toHaveBeenCalled(); // Layer A → LLM 미호출(지출 0)
+    expect(reportCache.has(searchCacheKey('네이버전용', undefined))).toBe(false); // null 리포트 미적재
+    // 검색은 끊기지 않고 휴리스틱 그래프로 폴백(usage 노드 없음)
+    expect(result.graph.nodes.some((n) => n.kind === 'usage')).toBe(false);
+    expect(result.graph.nodes.find((n) => n.kind === 'center')?.label).toBe('네이버전용');
+  });
 });

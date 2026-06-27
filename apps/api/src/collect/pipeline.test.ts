@@ -31,17 +31,33 @@ describe('tokenize', () => {
 
 describe('dedupeByUrl', () => {
   it('쿼리/해시/말미슬래시를 무시하고 중복 제거', () => {
-    const a = normalize({ title: 'x', url: 'https://e.com/a/' }, 'web', 's1', NOW);
-    const b = normalize({ title: 'y', url: 'https://e.com/a?q=1#h' }, 'web', 's2', NOW);
+    const a = normalize({ title: 'x', url: 'https://e.com/a/' }, 'web', 'A', 's1', NOW);
+    const b = normalize({ title: 'y', url: 'https://e.com/a?q=1#h' }, 'web', 'A', 's2', NOW);
     expect(dedupeByUrl([a, b])).toHaveLength(1);
+  });
+
+  it('동일 URL이 A/B로 충돌하면 Layer B를 보존한다(분석 가능 항목 우선, ADR-0014)', () => {
+    const a = normalize({ title: '네이버결과', url: 'https://ko.wikipedia.org/wiki/토스' }, 'naver', 'A', 'a1', NOW);
+    const b = normalize({ title: '위키결과', url: 'https://ko.wikipedia.org/wiki/토스' }, 'wikipedia', 'B', 'b1', NOW);
+
+    // A가 먼저 와도 B로 승격(등장 순서는 유지)
+    const out = dedupeByUrl([a, b]);
+    expect(out).toHaveLength(1);
+    expect(out[0]?.layer).toBe('B');
+    expect(out[0]?.source.id).toBe('b1');
+
+    // B가 먼저여도 B 유지(다운그레이드 없음)
+    const out2 = dedupeByUrl([b, a]);
+    expect(out2[0]?.layer).toBe('B');
+    expect(out2[0]?.source.id).toBe('b1');
   });
 });
 
 describe('extractTopics', () => {
   it('교차 출처 빈도가 높은 토픽을 상위로 둔다', () => {
     const items = [
-      normalize({ title: '토스 제품', url: 'https://e.com/1' }, 'web', 's1', NOW),
-      normalize({ title: '토스 뉴스', url: 'https://e.com/2' }, 'web', 's2', NOW),
+      normalize({ title: '토스 제품', url: 'https://e.com/1' }, 'web', 'A', 's1', NOW),
+      normalize({ title: '토스 뉴스', url: 'https://e.com/2' }, 'web', 'A', 's2', NOW),
     ];
     const topics = extractTopics(items, 5);
     expect(topics[0]?.token).toBe('토스');
@@ -51,9 +67,9 @@ describe('extractTopics', () => {
 
   it('조사가 붙은 표면형도 같은 토픽으로 집계된다(파편화 방지)', () => {
     const items = [
-      normalize({ title: '토스가 출시', url: 'https://e.com/1' }, 'web', 's1', NOW),
-      normalize({ title: '토스는 핀테크', url: 'https://e.com/2' }, 'naver', 's2', NOW),
-      normalize({ title: '토스를 분석', url: 'https://e.com/3' }, 'wikipedia', 's3', NOW),
+      normalize({ title: '토스가 출시', url: 'https://e.com/1' }, 'web', 'A', 's1', NOW),
+      normalize({ title: '토스는 핀테크', url: 'https://e.com/2' }, 'naver', 'A', 's2', NOW),
+      normalize({ title: '토스를 분석', url: 'https://e.com/3' }, 'wikipedia', 'B', 's3', NOW),
     ];
     const topics = extractTopics(items, 5);
     expect(topics[0]?.token).toBe('토스');

@@ -6,9 +6,9 @@
 
 ## 🥇 다음 세션 첫 작업 (Top Pick)
 
-**[adr0014-source-layer-split] ADR-0014 소스 레이어 분리 — 수집 파이프라인 Layer A(표시)/Layer B(분석·저장) 게이트 (컴플라이언스 하드게이트·키스톤)**
+**[pipa-sensitive-filter-hardening] PIPA/민감정보 필터 고도화 — 외국인등록번호·이메일·카드(Luhn) 마스킹 (M1 출시 하드게이트)**
 
-현재 코드가 [ADR-0014](./adr/0014-source-license-segmentation.md)를 **능동적으로 위반 중**이라 최우선이다. `apps/api/src/analyze/report.ts:139-141`이 네이버·카카오(Layer A) 스니펫을 출처유형 구분 없이 상위 18건으로 Claude에 보내고 그 리포트가 7일 캐시에 적재된다 = PIPA 골든룰급 부채. 동시에 후속(신규 Layer B 어댑터·모니터링) 전부의 정합성 선행이다(layer 태그가 단일 진실원). 상세 = NOW#1. **병행 가능한 독립 NOW 게이트** = pipa-sensitive-filter-hardening(NOW#2)·data-deletion-request-flow(NOW#3, 실배포 전 하드게이트). ⚠️ 키스톤 착수 시 기존 `report.test.ts` 픽스처(전부 naver=Layer A)를 wikipedia(Layer B)로 전환해야 테스트가 그린(적대적 검증 발견).
+ADR-0014 소스 레이어 분리(키스톤)는 **✅ 완료**(브랜치 `security/source-layer-split` — `report.ts`가 LLM 입력·7일 캐시·인용을 `items.filter(layer==='B')`로 게이트, 단일 진실원=`SourceAdapter.layer`). 다음 최우선은 M1 출시 하드게이트다. `pii.ts`의 redactSensitive가 주민번호·휴대전화 2종만 마스킹해 외국인등록번호·이메일이 실측상 그대로 통과한다(상세=NOW#1). LLM 호출 0·외부키 0·계약변경 0이라 비용 대비 안전성 이득이 크다. **병행 가능한 독립 게이트** = data-deletion-request-flow(NOW#2, 실배포 전 하드게이트). LAYER-SPLIT의 잔여위험(LLM 산출물 PII 출력측 재마스킹)도 이 작업과 함께 검토 권고.
 
 ## ⚠️ 통합·순서 주의 (Synthesis Notes)
 
@@ -18,7 +18,7 @@
 
 | 티어 | 항목 (우선순위 순) |
 |---|---|
-| **NOW** | 1. adr0014-source-layer-split · 2. pipa-sensitive-filter-hardening · 3. data-deletion-request-flow  ·  (✅ 완료: llm-budget-auto-cap → #48/ADR-0013) |
+| **NOW** | 1. pipa-sensitive-filter-hardening · 2. data-deletion-request-flow  ·  (✅ 완료: adr0014-source-layer-split → security/source-layer-split, llm-budget-auto-cap → #48/ADR-0013) |
 | **NEXT** | 1. korean-tokenizer-protected-dict-expansion · 2. additional-sources-appstore-publicdata-m2 · 3. representative-seed-corpus-qa · 4. graph-entity-resolution · 5. axe-accessibility-tests · 6. youtube-data-api-adapter · 7. mobile-3d-quality-fallback · 8. 3d-node-labels-keyboard-nav · 9. cost-quota-monitoring-dashboard-m2 · 10. lighthouse-ci-perf-budget |
 | **LATER** | 1. graph-ux-filters-history-share-m2 · 2. usage-report-cache-quality-monitoring · 3. llm-usage-cost-metrics · 4. analytics-observability-m2 · 5. graph-performance-lod-budget · 6. frontend-live-data-visual-qa · 7. i18n-scaffolding-ko-only · 8. playwright-e2e-suite · 9. paid-feature-flags-m2 |
 | **DEFERRED** | 1. tavily-web-search-adapter · 2. supabase-auth-m2 · 3. korean-morphological-analyzer-eval · 4. x-twitter-source-adapter-gated · 5. reddit-source-adapter-gated · 6. instagram-source-adapter-gated |
@@ -27,12 +27,12 @@
 
 ## NOW · 다음 세션 즉시
 
-_최우선은 **ADR-0014 컴플라이언스 게이트(소스 레이어 분리)** — 현재 코드가 네이버·카카오를 LLM/7일캐시에 흘려 능동 위반 중이다(report.ts:139-141). 이어 M1 출시 하드게이트(PIPA 민감정보 필터·삭제요청 경로)를 닫는다. 모두 readiness=ready·$0·외부 의존 0, 코드 검증으로 실제 공백 확인(pii.ts 외국인등록번호·이메일 미마스킹, registry 차단목록 부재). 예산 서킷 브레이커는 #48/ADR-0013으로 완료._
+_**ADR-0014 컴플라이언스 게이트(소스 레이어 분리)는 ✅ 완료**(브랜치 security/source-layer-split — report.ts가 LLM 입력·7일캐시·인용을 Layer B로 게이트, 단일 진실원=SourceAdapter.layer). 다음 최우선은 M1 출시 하드게이트(PIPA 민감정보 필터·삭제요청 경로)를 닫는 것. 모두 readiness=ready·$0·외부 의존 0, 코드 검증으로 실제 공백 확인(pii.ts 외국인등록번호·이메일 미마스킹, registry 차단목록 부재). 예산 서킷 브레이커는 #48/ADR-0013으로 완료._
 
-### 1. ADR-0014 소스 레이어 분리 — 수집 파이프라인 Layer A(표시)/Layer B(분석·저장) 게이트
-`id: adr0014-source-layer-split` · 노력 **M(중간)** · 🔴 컴플라이언스 하드게이트(키스톤) · tier:now
+### ✅ (완료 — 2026-06-27, 브랜치 `security/source-layer-split`) ADR-0014 소스 레이어 분리 — Layer A(표시)/Layer B(분석·저장) 게이트
+`id: adr0014-source-layer-split` · ✅ **완료** — `report.ts`가 LLM 입력·7일 캐시·인용을 `items.filter(layer==='B')`로 게이트(단일 진실원=`SourceAdapter.layer`). dedup A→B 보존, 공유계약 미변경, `CACHE_TTL_MS` 상한으로 Layer A 표시 ≤30분 강제, 레이어 게이트 단위·통합테스트 추가. 아래는 명세 이력.
 
-**왜**: 현재 코드가 ADR-0014를 능동적으로 위반한다. `report.ts:139-141`이 네이버·카카오(Layer A) 스니펫을 출처유형 구분 없이 신뢰도순 상위 18건(`MAX_SOURCES`=18, report.ts:40)으로 Claude에 전송하고, 그 파생 리포트가 7일 reportCache에 적재된다 = PIPA 골든룰급 부채. 근본 원인은 정규화 후 provenance 소실 — `SourceType` enum이 제공자(naver)와 콘텐츠유형(blog/web)을 혼재해 `Source.type`만으로는 Layer A를 식별·필터할 수 없다(네이버-blog와 카카오-blog가 동일 'blog', 카카오-web과 향후 Tavily-web이 동일 'web'). 명시적 `layer` 태그를 도입하면 LLM 입력·7일 캐시·인용 누출을 단일 게이트로 차단하고, 후속 Layer B 어댑터·모니터링의 정합성 기반이 된다.
+**왜**(완료 전 근거): 코드가 ADR-0014를 능동적으로 위반했다. `report.ts`가 네이버·카카오(Layer A) 스니펫을 출처유형 구분 없이 신뢰도순 상위 18건(`MAX_SOURCES`=18, report.ts:40)으로 Claude에 전송하고, 그 파생 리포트가 7일 reportCache에 적재된다 = PIPA 골든룰급 부채. 근본 원인은 정규화 후 provenance 소실 — `SourceType` enum이 제공자(naver)와 콘텐츠유형(blog/web)을 혼재해 `Source.type`만으로는 Layer A를 식별·필터할 수 없다(네이버-blog와 카카오-blog가 동일 'blog', 카카오-web과 향후 Tavily-web이 동일 'web'). 명시적 `layer` 태그를 도입하면 LLM 입력·7일 캐시·인용 누출을 단일 게이트로 차단하고, 후속 Layer B 어댑터·모니터링의 정합성 기반이 된다.
 
 **수용 기준**:
 - `SourceAdapter`에 `readonly layer: 'A'|'B'` 추가(단일 진실원). naver/kakao='A', wikipedia='B'.

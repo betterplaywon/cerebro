@@ -8,6 +8,7 @@ function stub(id: string, items: RawItem[]): SourceAdapter {
   return {
     id,
     sourceType: 'web',
+    layer: 'A',
     requiresKey: false,
     isEnabled: () => true,
     collect: () => Promise.resolve(items),
@@ -37,6 +38,7 @@ describe('collectAll', () => {
     const multi: SourceAdapter = {
       id: 'multi',
       sourceType: 'naver',
+      layer: 'A',
       requiresKey: false,
       isEnabled: () => true,
       collect: () =>
@@ -56,6 +58,7 @@ describe('collectAll', () => {
     const bad: SourceAdapter = {
       id: 'bad',
       sourceType: 'web',
+      layer: 'A',
       requiresKey: false,
       isEnabled: () => true,
       collect: () => Promise.reject(new Error('boom')),

@@ -29,6 +29,7 @@ export function createWikipediaAdapter(deps: { fetchImpl?: typeof fetch } = {}):
   return {
     id: 'wikipedia',
     sourceType: 'wikipedia',
+    layer: 'B', // CC BY-SA — 재가공·저장·수익화 허용(LLM 리포트·7일 캐시 입력 가능). ADR-0014.
     requiresKey: false,
     isEnabled: () => true,
     async collect({ query, limit = 8, signal }: CollectContext): Promise<RawItem[]> {

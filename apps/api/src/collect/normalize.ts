@@ -1,5 +1,5 @@
 import type { Source, SourceType } from '@cerebro/shared';
-import type { RawItem } from '../sources/types.js';
+import type { RawItem, SourceLayer } from '../sources/types.js';
 import { stripParticle } from './korean.js';
 import { redactSensitive } from './pii.js';
 
@@ -7,6 +7,11 @@ export interface NormalizedItem {
   source: Source;
   /** 제목·스니펫에서 추출한 키워드 토큰 */
   tokens: string[];
+  /**
+   * 출처의 라이선스 레이어(ADR-0014). 어댑터에서 전파(단일 진실원).
+   * LLM 재가공·7일 리포트 캐시·인용은 'B'만 — 'A'(네이버·카카오)는 표시·30분 캐시 전용.
+   */
+  layer: SourceLayer;
 }
 
 const STOPWORDS = new Set([
@@ -65,6 +70,7 @@ export function baseConfidence(type: SourceType): number {
 export function normalize(
   raw: RawItem,
   type: SourceType,
+  layer: SourceLayer,
   id: string,
   collectedAt: string,
 ): NormalizedItem {
@@ -83,7 +89,7 @@ export function normalize(
     confidence: baseConfidence(type),
   };
   const tokens = unique([...tokenize(title), ...tokenize(snippet ?? '')]);
-  return { source, tokens };
+  return { source, tokens, layer };
 }
 
 function unique<T>(arr: T[]): T[] {
