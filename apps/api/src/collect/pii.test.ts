@@ -15,6 +15,16 @@ describe('redactSensitive', () => {
     expect(redactSensitive('000101-7234567 입니다')).not.toContain('000101-7234567');
   });
 
+  it('점 구분자 등록번호도 마스킹한다(날짜부 점 표기 습관 — 적대적 검증 발견 누출)', () => {
+    // 한국어가 날짜를 점으로 쓰는 습관이 주민번호 표기로 이어진다. 이전엔 [-\s]만 잡아 누출.
+    expect(redactSensitive('900101.1234567')).toBe(MASK);
+    expect(redactSensitive('외국인 050101.8234567')).not.toContain('050101.8234567');
+  });
+
+  it('한글에 바로 붙은 등록번호도 마스킹한다(\\b가 한글 경계에서 동작)', () => {
+    expect(redactSensitive('연락처900101-1234567참고')).not.toContain('900101-1234567');
+  });
+
   it('이메일(연락처)을 마스킹한다', () => {
     expect(redactSensitive('문의 hong@test.com 으로')).not.toContain('hong@test.com');
     expect(redactSensitive('a.b+tag@sub.example.co.kr')).toBe(MASK);
@@ -29,6 +39,18 @@ describe('redactSensitive', () => {
   it('Luhn을 통과하는 신용카드 번호를 마스킹한다(공백·하이픈 구분자)', () => {
     expect(redactSensitive('카드 4111 1111 1111 1111 결제')).not.toContain('4111');
     expect(redactSensitive('4111-1111-1111-1111')).toBe(MASK);
+  });
+
+  it('16자리 외 길이(Amex 15자리)도 Luhn 통과 시 마스킹한다(길이밴드 13~19 보장)', () => {
+    // 양성 케이스가 전부 16자리면 {12,18} 밴드가 16으로 좁혀져도 회귀가 안 잡힘 → 15자리로 고정.
+    expect(redactSensitive('카드 3782 822463 10005')).not.toContain('3782');
+  });
+
+  it('@가 없는 긴 문자열도 빠르게 원문 반환한다(이메일 정규식 2차 백트래킹 차단)', () => {
+    const long = 'a'.repeat(100_000);
+    const start = performance.now();
+    expect(redactSensitive(long)).toBe(long);
+    expect(performance.now() - start).toBeLessThan(1000); // 선형이면 수 ms, 2차면 수 초
   });
 
   // ── 오탐(과탐) 저감 회귀 코퍼스: 아래는 모두 원문 그대로 유지되어야 한다 ──
