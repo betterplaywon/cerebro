@@ -121,6 +121,20 @@ describe('analyzeUsage', () => {
     const { client } = mockClient('{}', 'refusal');
     expect(await analyzeUsage('토스', sampleItems(), { client })).toBeNull();
   });
+
+  it('LLM 산출물(summary·hook·report)의 PII를 출력측에서 재마스킹한다(ADR-0014 잔여위험)', async () => {
+    const payload = JSON.stringify({
+      summary: '대표 연락처는 010-1234-5678 이다.',
+      angles: [
+        { key: 'investment', hook: '문의 hong@test.com', report: '주민번호 900101-1234567 노출', sourceRefs: [0] },
+      ],
+    });
+    const { client } = mockClient(payload);
+    const result = await analyzeUsage('토스', sampleItems(), { client });
+    expect(result!.summary).not.toContain('010-1234-5678');
+    expect(result!.angles[0]?.hook).not.toContain('hong@test.com');
+    expect(result!.angles[0]?.report).not.toContain('900101-1234567');
+  });
 });
 
 // ── ADR-0014 소스 레이어 게이트: LLM 입력·인용은 Layer B만(네이버·카카오=Layer A 차단) ──

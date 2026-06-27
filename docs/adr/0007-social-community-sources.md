@@ -33,7 +33,7 @@
 1. **네이버 어댑터 확장**: 기존 webkr/news 에 `blog`·`cafearticle`·`kin` 추가(동일 키).
 2. **카카오(다음) 검색 어댑터 신규**: `web`·`blog`·`cafe`(`KAKAO_REST_API_KEY` 미설정 시 자동 비활성).
 3. **출처 투명성**: `RawItem.sourceType` 항목별 오버라이드를 도입해 blog→블로그, cafe/kin→커뮤니티로 정확히 배지.
-4. **PIPA 경계 가드 신설**: UGC 유입으로 늘어나는 민감정보 노출에 대비, 수집 경계(`normalize`)에서 주민번호·휴대전화 패턴을 마스킹.
+4. **PIPA 경계 가드 신설**: UGC 유입으로 늘어나는 민감정보 노출에 대비, 수집 경계(`normalize`) + LLM 산출물(`report.ts`)에서 주민·외국인등록번호·휴대전화·이메일·신용카드(Luhn) 패턴을 마스킹(2026-06-27 고도화, `security/pii-filter-hardening`; 날짜부·Luhn 검증으로 오탐 저감, 자유서술형 민감정보는 범위 밖).
 
 SNS는 보류: **X**(유료 — 예산 승인 시 flag+상한 뒤에서만), **Instagram**(법인 인증·앱심사),
 **Reddit**(상업 계약). **Facebook**은 도입 불가(어댑터 만들지 않음).
