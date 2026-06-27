@@ -20,7 +20,8 @@ export function MindMapView({ graph }: { graph: GraphSnapshot }) {
 
   return (
     <div className="app__graph">
-      <Suspense fallback={<CerebroLoader label="3D 그래프 준비 중…" />}>
+      {/* 3D 캔버스 청크는 곧 마운트되므로 무거운 시네마틱 대신 가벼운 셸로 폴백(여분 WebGL 컨텍스트 방지). */}
+      <Suspense fallback={<CerebroLoader label="3D 그래프 준비 중…" mode="shell" />}>
         <MindMapCanvas graph={graph} selectedId={selected?.id ?? null} onSelect={setSelected} />
       </Suspense>
       {selected && <DetailPanel node={selected} graph={graph} onClose={() => setSelected(null)} />}
