@@ -44,6 +44,16 @@ export const EnvSchema = z.object({
   ANTHROPIC_API_KEY: optionalSecret,
   /** 분석에 쓸 Claude 모델. 비용·품질 균형으로 Sonnet 4.6 기본(ADR-0008). */
   ANALYSIS_MODEL: z.string().min(1).default('claude-sonnet-4-6'),
+  /**
+   * LLM 월 예산 상한(USD, 서킷 브레이커 — ADR-0013). 누적 추정 비용이 이 값에 도달하면
+   * 분석을 자동 차단하고 휴리스틱 그래프로 폴백(지출 0). 기본 8($8.8 한도 미만 헤드룸).
+   * 0이면 LLM 분석을 항상 차단(킬 스위치).
+   */
+  ANTHROPIC_BUDGET_USD: z.coerce.number().nonnegative().default(8),
+  /** 분석 입력 토큰 단가(USD per 1M). 기본 Sonnet 4.6 = $3(ADR-0008). 모델 교체 시 동기화. */
+  ANALYSIS_INPUT_USD_PER_MTOK: z.coerce.number().positive().default(3),
+  /** 분석 출력 토큰 단가(USD per 1M). 기본 Sonnet 4.6 = $15(ADR-0008). 모델 교체 시 동기화. */
+  ANALYSIS_OUTPUT_USD_PER_MTOK: z.coerce.number().positive().default(15),
 });
 
 export const env = EnvSchema.parse(process.env);

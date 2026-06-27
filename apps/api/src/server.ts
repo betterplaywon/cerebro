@@ -9,7 +9,8 @@ import {
 import { env } from './env.js';
 import { createTTLCache } from './lib/cache.js';
 import { createSearchOrchestrator, type SearchOrchestrator } from './search/search-orchestrator.js';
-import type { UsageReport } from './analyze/report.js';
+import { analyzeUsage, type UsageReport } from './analyze/report.js';
+import { createBudgetTracker, type BudgetTracker } from './analyze/budget.js';
 import type { SourceAdapter } from './sources/types.js';
 
 // 부팅 작업(프리웜 등)이 캐시 워밍에 재사용할 수 있도록 오케스트레이터를 인스턴스에 노출.
@@ -22,6 +23,11 @@ declare module 'fastify' {
 export interface BuildServerOptions {
   /** 수집 어댑터 주입(테스트는 fixture 주입으로 무네트워크). 미지정 시 registry 사용. */
   adapters?: SourceAdapter[];
+  /**
+   * LLM 예산 서킷 브레이커 주입(테스트는 예산 소진 상태를 주입해 폴백 검증). 미지정 시 env 기반 생성.
+   * 인스턴스 스코프(캐시·오케스트레이터와 동일) — 테스트 격리 보장.
+   */
+  budget?: BudgetTracker;
 }
 
 /** 에러 객체에서 statusCode를 안전 추출(숫자가 아니면 undefined). */
@@ -65,12 +71,29 @@ export function buildServer(opts: BuildServerOptions = {}): FastifyInstance {
   // 2단 캐시(ADR-0011): 스냅샷(데이터+리포트) 30분 + LLM 리포트 7일. 둘 다 인스턴스 스코프(테스트 격리).
   const cache = createTTLCache<GraphSnapshot>({ ttlMs: env.CACHE_TTL_MS });
   const reportCache = createTTLCache<UsageReport>({ ttlMs: env.REPORT_CACHE_TTL_MS });
-  const orchestrator = createSearchOrchestrator({ cache, reportCache, adapters: opts.adapters });
+  // 예산 서킷 브레이커(ADR-0013): 누적 추정 비용이 상한 도달 시 LLM 분석을 자동 차단 → 휴리스틱 폴백.
+  const budget =
+    opts.budget ??
+    createBudgetTracker({
+      capUsd: env.ANTHROPIC_BUDGET_USD,
+      inputUsdPerMTok: env.ANALYSIS_INPUT_USD_PER_MTOK,
+      outputUsdPerMTok: env.ANALYSIS_OUTPUT_USD_PER_MTOK,
+    });
+  const orchestrator = createSearchOrchestrator({
+    cache,
+    reportCache,
+    adapters: opts.adapters,
+    analyze: (query, items) => analyzeUsage(query, items, { budget }),
+  });
   app.decorate('orchestrator', orchestrator);
 
   app.register(cors, { origin: env.CORS_ORIGIN });
 
   app.get('/health', async () => ({ status: 'ok' as const }));
+
+  // LLM 예산 관측(ADR-0013): 누적 토큰·추정비용·상한·남은예산·서킷 오픈 여부를 노출한다.
+  // 비민감 집계만 반환 — 키·시크릿 값은 절대 포함하지 않는다(getStats가 토큰 수·USD만 제공).
+  app.get('/api/usage', async () => ({ budget: budget.getStats() }));
 
   app.post('/api/search', async (request, reply) => {
     const parsed = SearchRequestSchema.safeParse(request.body);

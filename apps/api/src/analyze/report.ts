@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { env } from '../env.js';
 import type { NormalizedItem } from '../collect/normalize.js';
+import type { BudgetTracker } from './budget.js';
 
 /**
  * 활용 관점(usage angle) 분석 — 수집된 공개 출처를 Claude로 정제해
@@ -115,6 +116,11 @@ const SYSTEM_PROMPT = [
 interface AnalyzeDeps {
   /** 테스트용 클라이언트 주입(미지정 시 실제 Anthropic 클라이언트 생성) */
   client?: Pick<Anthropic, 'messages'>;
+  /**
+   * 예산 서킷 브레이커 주입(ADR-0013). 있으면 호출 전 차단 검사 + 호출 후 사용량 기록.
+   * 미지정 시 예산 통제 없음(기존 동작 — 키 게이트·캐시·폴백만).
+   */
+  budget?: BudgetTracker;
 }
 
 /**
@@ -127,6 +133,8 @@ export async function analyzeUsage(
 ): Promise<UsageReport | null> {
   if (!env.ANTHROPIC_API_KEY) return null;
   if (items.length === 0) return null;
+  // 예산 소진(서킷 오픈) 시 호출하지 않고 폴백(지출 0) — '키 없음'과 동일한 null 폴백 경로.
+  if (deps.budget && !deps.budget.canSpend()) return null;
 
   const top = [...items]
     .sort((a, b) => b.source.confidence - a.source.confidence)
@@ -146,6 +154,9 @@ export async function analyzeUsage(
     messages: [{ role: 'user', content: userContent }],
     output_config: { format: { type: 'json_schema', schema: ANALYSIS_JSON_SCHEMA } },
   });
+
+  // API가 청구한 토큰은 응답 내용과 무관하게 기록한다 — refusal/빈응답 early-return보다 먼저.
+  if (deps.budget && res.usage) deps.budget.record(res.usage);
 
   if (res.stop_reason === 'refusal') return null;
 
