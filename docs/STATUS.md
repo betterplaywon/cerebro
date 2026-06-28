@@ -121,7 +121,7 @@ curl -s localhost:8787/api/search -X POST -H 'content-type: application/json' -d
 
 **✅ 완료**(이력은 §8·ADR): 하이브리드 검색(위키+네이버+카카오) · 출처 표시 UX(PR #13) · 한국어 조사 분리 토큰화(ADR-0004) · 노드 카테고리 분류(ADR-0006) · 국내 커뮤니티 소스(ADR-0007) · 토픽 노이즈 제거(PR #21) · **LLM 활용 관점 리포트(ADR-0008)** · **시네마틱 3D 마인드맵 + 글래스 타일 라벨(PR #22, postprocessing v2 고정)** · **BE+FE 리팩토링 패스(PR #33–#37, 감사 워크플로 기반)**.
 
-> 🔧 **현재 진행 트랙 = 코드 품질.** 리팩토링 패스 완료 → **다음은 최적화**(사용자 명시). 최적화 후보(감사에서 "리팩토링 아님/최적화"로 분류돼 보류된 것들): `MindMapCanvas` 번들 ~931kB 코드분할 · `CategoryLegend`/`DetailPanel` 메모이제이션 · `DetailPanel` 출처 필터 O(n·m)→Map · 3D 렌더 비용·모바일 Bloom 저감. 아래 NOW/NEXT는 **M1 출시 게이트(제품 트랙)** — 최적화 트랙과 별개로, 출시 준비 재개 시 1번부터.
+> 🔧 **코드 품질 트랙: 리팩토링 패스(#33–#37) → 최적화 1차 완료(#65·#66, 2026-06-28).** 최적화 감사 워크플로(영역별 병렬 탐색 → 적대적 YAGNI 검증)로 do-now 2건 머지: **#65 `MindMapCanvas` `frameloop="demand"` + `antialias:false`**(정적 결과 뷰의 Bloom 풀파이프라인 유휴 60fps 무한렌더 제거 — 모바일 발열·배터리, behavior 보존) · **#66 레이트리미터 토큰버킷(ADR-0017)**(multi-endpoint 인트라-검색 스태거 제거 → naver 캐시미스 ~480ms 단축, 지속 상한 유지, cyber-security 조건부 승인). 감사가 skip한 것(전부 premature·체감이득 negligible): `DetailPanel` O(n·m)→Map·메모이제이션·regex 호이스트·Intl 재사용·manualChunks·캐시히트 zod 재검증(API는 네트워크/LLM-bound). **남은 최적화 do-later(오너/디자이너 게이트 필요·미착수)**: ① LLM 점진 2단 전달(데이터 그래프 즉시+리포트 비동기, high·behavior change·shared+BE+FE 횡단·ADR 선작성) ② 모바일/reduced-motion 3D 폴백(dpr캡·Bloom 저감·focus-snap, behavior change·Designer 합의) ③ 3D 청크 프리워밍(premature 경계). 아래 NOW/NEXT는 **M1 출시 게이트(제품 트랙)** — 최적화 트랙과 별개로, 출시 준비 재개 시 1번부터.
 
 **🥇 출시 트랙 첫 작업(Top Pick)**: **삭제(잊힐 권리) 요청 경로**(차단목록 + 요청 채널/고지 + 런북, M1 Exit④) — PIPA 필터·LAYER-SPLIT는 ✅ 완료.
 
