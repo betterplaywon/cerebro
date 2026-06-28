@@ -49,8 +49,37 @@ body {
   font-size: 1.25rem;
   letter-spacing: 0.08em;
   margin: 0;
+}
+
+/* 로고 버튼 — 시각은 기존 브랜드 텍스트 그대로, 동작은 "홈으로 리셋". */
+.app__brand-button {
+  font: inherit;
+  letter-spacing: inherit;
+  padding: 0.1rem 0.2rem;
+  margin: -0.1rem -0.2rem; /* 클릭 영역만 넓히고 시각 위치는 유지 */
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
   color: var(--accent);
   text-shadow: 0 0 16px rgba(124, 246, 255, 0.5);
+  cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    text-shadow 0.15s ease;
+}
+
+.app__brand-button:hover:not(:disabled) {
+  text-shadow: 0 0 22px rgba(124, 246, 255, 0.85);
+}
+
+.app__brand-button:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+/* idle(결과 없음)에선 리셋할 것이 없어 비활성 — 단, 브랜드는 흐려 보이지 않게 유지. */
+.app__brand-button:disabled {
+  cursor: default;
 }
 
 .app__main {
