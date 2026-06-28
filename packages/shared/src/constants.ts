@@ -53,6 +53,5 @@ export const SOURCE_TYPES = [
 /** 그래프 제약 (성능 예산 — 모바일 폴백 시 더 낮게) */
 export const GRAPH_LIMITS = {
   MAX_NODES: 200,
-  MAX_EDGES: 400,
   MAX_QUERY_LENGTH: 80,
 } as const;

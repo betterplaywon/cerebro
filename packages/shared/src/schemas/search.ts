@@ -24,6 +24,5 @@ export const ApiErrorSchema = z.object({
   }),
 });
 
-export type SearchRequest = z.infer<typeof SearchRequestSchema>;
 export type SearchResponse = z.infer<typeof SearchResponseSchema>;
 export type ApiError = z.infer<typeof ApiErrorSchema>;
