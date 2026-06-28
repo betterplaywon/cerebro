@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { MathUtils, Vector3 } from 'three';
-import { SCENE, timelineAt, type CrowdLayout } from '../../lib/cerebro-timeline';
+import { SCENE, timelineAt, writeFocusPosition, type CrowdLayout } from '../../lib/cerebro-timeline';
 
 // 모듈 스코프 스크래치 — 단일 디렉터, 프레임당 할당 0.
 const camWide = new Vector3();
@@ -10,6 +10,7 @@ const camFocus = new Vector3();
 const lookFocus = new Vector3();
 const camTarget = new Vector3();
 const lookTarget = new Vector3();
+const focusPos = new Vector3();
 
 /**
  * 카메라 연출(null 렌더, priority 0). timelineAt이 준 모드/스칼라로 목표 포즈를 만들고
@@ -35,12 +36,9 @@ export function CameraDirector({ layout }: { layout: CrowdLayout }) {
       const a = tl.driftAngle;
       camWide.set(Math.sin(a) * 2.0, 0.6, SCENE.cam.restZ);
       lookWide.set(Math.sin(a * 0.7) * 1.5, -0.2, -10);
-      const i = tl.focusIndex * 3;
-      const fx = layout.positions[i] ?? 0;
-      const fy = layout.positions[i + 1] ?? 0;
-      const fz = layout.positions[i + 2] ?? 0;
-      camFocus.set(fx * SCENE.crowd.focusXFactor, fy + 0.5, fz + tl.focusDist);
-      lookFocus.set(fx, fy, fz);
+      writeFocusPosition(layout.positions, tl.focusIndex, focusPos);
+      camFocus.set(focusPos.x * SCENE.crowd.focusXFactor, focusPos.y + 0.5, focusPos.z + tl.focusDist);
+      lookFocus.copy(focusPos);
       camTarget.copy(camWide).lerp(camFocus, tl.focusBlend);
       lookTarget.copy(lookWide).lerp(lookFocus, tl.focusBlend);
     }

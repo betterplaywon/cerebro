@@ -4,6 +4,7 @@ import {
   buildCrowdLayout,
   pickFocusIndex,
   timelineAt,
+  writeFocusPosition,
   bell,
   easeInOutSine,
   easeOutQuint,
@@ -127,5 +128,19 @@ describe('cerebro-timeline / 군중 레이아웃 & 포커스', () => {
     for (let c = 0; c < 12; c++) picks.add(pickFocusIndex(c, CANDIDATES));
     expect(picks.size).toBeGreaterThan(1); // 항상 같은 한 명만 고르지 않는다
     for (const p of picks) expect(CANDIDATES).toContain(p);
+  });
+
+  it('writeFocusPosition은 focusIndex 인물의 stride-3 좌표를 target에 기록한다(할당 없이)', () => {
+    const positions = new Float32Array([0, 0, 0, 1.5, -2, -10, 9, 9, 9]);
+    const target = { x: 0, y: 0, z: 0, set(x: number, y: number, z: number) { this.x = x; this.y = y; this.z = z; } };
+    writeFocusPosition(positions, 1, target);
+    expect([target.x, target.y, target.z]).toEqual([1.5, -2, -10]);
+  });
+
+  it('writeFocusPosition은 범위를 벗어난 결측 좌표를 0으로 채운다', () => {
+    const positions = new Float32Array([1, 2, 3]);
+    const target = { x: -1, y: -1, z: -1, set(x: number, y: number, z: number) { this.x = x; this.y = y; this.z = z; } };
+    writeFocusPosition(positions, 5, target); // i=15, 배열 밖
+    expect([target.x, target.y, target.z]).toEqual([0, 0, 0]);
   });
 });

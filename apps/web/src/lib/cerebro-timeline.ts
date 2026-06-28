@@ -184,6 +184,20 @@ export function buildCrowdLayout(count: number, seed: number): CrowdLayout {
   return { count, positions, seeds, tones, sizes, focusCandidates };
 }
 
+/** Vector3처럼 set(x,y,z)를 받는 싱크. three import 없이 구조적 타이핑으로 모듈의 three-free를 지킨다. */
+interface Vec3Sink {
+  set(x: number, y: number, z: number): unknown;
+}
+
+/**
+ * 군중 layout에서 focusIndex 인물의 좌표를 target에 기록한다 — buildCrowdLayout 쓰기의 역연산.
+ * target에 직접 써 프레임당 할당 0(useFrame 핫패스 안전). 범위를 벗어난 결측 좌표는 0으로 채운다.
+ */
+export function writeFocusPosition(positions: Float32Array, focusIndex: number, target: Vec3Sink): void {
+  const i = focusIndex * 3;
+  target.set(positions[i] ?? 0, positions[i + 1] ?? 0, positions[i + 2] ?? 0);
+}
+
 /** 사이클마다 결정적으로 서로 다른 후보를 고른다(정수 해시 → 후보 인덱스). */
 export function pickFocusIndex(cycle: number, candidates: number[]): number {
   if (candidates.length === 0) return 0;
