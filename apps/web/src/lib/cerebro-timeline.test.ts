@@ -61,6 +61,27 @@ describe('cerebro-timeline / timelineAt', () => {
     expect(timelineAt(2.0, CANDIDATES).flash).toBe(0);
   });
 
+  it('bgWhiteT는 어디서도 bgWhitePeak를 넘지 않는다(전체화면 백색 플래시 방지)', () => {
+    let maxSeen = 0;
+    for (let t = 0; t < 30; t += 0.02) {
+      const v = timelineAt(t, CANDIDATES).bgWhiteT;
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(SCENE.intro.bgWhitePeak + 1e-9);
+      maxSeen = Math.max(maxSeen, v);
+    }
+    // 인트로 버스트 중심에서 상한에 도달한다(글로우는 존재하되 절제됨).
+    expect(maxSeen).toBeCloseTo(SCENE.intro.bgWhitePeak);
+  });
+
+  it('루프에는 섬광이 없다 — 여러 사이클에 걸쳐 flash·bgWhiteT가 0이다(반복 번쩍임 제거)', () => {
+    const base = SCENE.intro.total;
+    for (let lt = 0; lt < SCENE.loop.cycle * 3; lt += 0.05) {
+      const tl = timelineAt(base + lt, CANDIDATES);
+      expect(tl.flash).toBe(0);
+      expect(tl.bgWhiteT).toBe(0);
+    }
+  });
+
   it('카메라 z가 인트로 위상 경계에서 연속이다(점프 없음)', () => {
     const eps = 1e-3;
     for (const b of [SCENE.intro.p0End, SCENE.intro.p1End, SCENE.intro.p2End]) {
