@@ -6,6 +6,7 @@ import {
   type Source,
   type SubjectType,
 } from '@cerebro/shared';
+import { buildCenterNode, buildSubject, centerEdges } from './skeleton.js';
 
 /**
  * MVP 스텁: 실제 수집(SourceAdapter) 전까지 프론트 개발/검증을 위한 결정적 목업 그래프.
@@ -30,15 +31,11 @@ export function buildMockGraph(query: string, type: SubjectType = 'unknown'): Gr
     mkSource('s-blog', '블로그 리뷰', 'blog', 0.5),
   ];
 
-  const center: GraphNode = {
-    id: 'center',
-    label: query,
-    kind: 'center',
+  const center = buildCenterNode({
+    query,
     summary: `'${query}'에 대한 공개정보를 중심-가지 구조로 정리한 결과입니다. (현재는 목업)`,
-    importance: 1,
-    confidence: 0.9,
     sourceIds: ['s-wiki'],
-  };
+  });
 
   const branches: GraphNode[] = [
     { id: 'n-product', label: NODE_KIND_LABELS.product, kind: 'product', importance: 0.8, confidence: 0.7, sourceIds: ['s-store'], summary: '대표 제품/서비스' },
@@ -58,22 +55,14 @@ export function buildMockGraph(query: string, type: SubjectType = 'unknown'): Gr
   const nodes: GraphNode[] = [center, ...branches, ...leaves];
 
   const edges: GraphEdge[] = [
-    ...branches.map(
-      (b): GraphEdge => ({
-        id: `e-center-${b.id}`,
-        source: center.id,
-        target: b.id,
-        relation: '관련',
-        weight: b.importance,
-      }),
-    ),
+    ...centerEdges(branches, '관련'),
     { id: 'e-product-leaf', source: 'n-product', target: 'l-product-1', relation: '포함', weight: 0.5 },
     { id: 'e-news-leaf', source: 'n-news', target: 'l-news-1', relation: '포함', weight: 0.45 },
     { id: 'e-reputation-leaf', source: 'n-reputation', target: 'l-reputation-1', relation: '포함', weight: 0.42 },
   ];
 
   return {
-    subject: { id: 'subject-1', query, type, displayName: query },
+    subject: buildSubject(query, type),
     nodes,
     edges,
     sources,
