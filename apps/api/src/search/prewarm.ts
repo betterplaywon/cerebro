@@ -1,3 +1,4 @@
+import { EXAMPLE_QUERIES } from '@cerebro/shared';
 import type { PipelineLogger, SearchOrchestrator } from './search-orchestrator.js';
 
 /**
@@ -11,21 +12,11 @@ import type { PipelineLogger, SearchOrchestrator } from './search-orchestrator.j
  */
 
 /**
- * 프리웜 시드 — 대표 기업/브랜드(공개정보·법인 한정, PIPA 정합). 개인 신상은 포함하지 않는다.
- * 8~15개 규모로 유지(과도한 기동 비용 방지).
+ * 프리웜 시드 = 검색어 예시 SSOT(`@cerebro/shared` EXAMPLE_QUERIES) — 홈 추천칩과 동일 목록이라
+ * 추천칩 클릭이 이 프리웜으로 데워진 캐시에 적중한다. 대상·PIPA·규모 정책은 SSOT 주석 참조
+ * (대표 기업·브랜드 + 공인/공개정보 한정).
  */
-export const PREWARM_SEEDS: readonly string[] = [
-  '삼성전자',
-  '카카오',
-  '네이버',
-  '토스',
-  '쿠팡',
-  'LG전자',
-  '현대자동차',
-  'SK하이닉스',
-  '배달의민족',
-  '당근마켓',
-];
+export const PREWARM_SEEDS: readonly string[] = EXAMPLE_QUERIES;
 
 /** 시드 사이 간격(ms) — 외부 소스 rate limit·LLM 비용 스파이크를 피해 저빈도로 순차 실행. */
 const PREWARM_INTERVAL_MS = 1500;
