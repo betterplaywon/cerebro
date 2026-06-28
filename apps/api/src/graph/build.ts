@@ -18,8 +18,13 @@ import type { UsageReport } from '../analyze/report.js';
 const CATEGORY_KINDS = ['product', 'news', 'reputation', 'channel', 'person'] as const;
 type CategoryKind = (typeof CATEGORY_KINDS)[number];
 
-/** 가독성 예산: 중심 외 가지(카테고리+concept) 총합 상한. */
+/** 가독성 예산: 휴리스틱 그래프의 중심 외 가지(카테고리+concept) 총합 상한. */
 const MAX_BRANCHES = 10;
+/**
+ * 활용 관점(usage) 그래프의 가지 상한. 휴리스틱(MAX_BRANCHES)과 분리 — 관점은 LLM이 주제별로
+ * 동적 생성하므로 더 풍성하게 보여준다(오너 요청으로 9→16 상향, ADR-0019). report.ts MAX_ANGLES와 정합.
+ */
+const MAX_USAGE_BRANCHES = 16;
 /** 카테고리 노드를 뒷받침할 대표 출처 최대 개수(출처 투명성). */
 const MAX_REPRESENTATIVES = 3;
 
@@ -100,7 +105,7 @@ function buildUsageGraph(
     sourceIds: sources.slice(0, 3).map((s) => s.id),
   });
 
-  const angleNodes: GraphNode[] = analysis.angles.slice(0, MAX_BRANCHES).map((angle, i) => {
+  const angleNodes: GraphNode[] = analysis.angles.slice(0, MAX_USAGE_BRANCHES).map((angle, i) => {
     const cited = angle.sourceIds.filter((id) => sourceById.has(id));
     const confidence = cited.length
       ? round2(mean(cited.map((id) => sourceById.get(id)!.confidence)))

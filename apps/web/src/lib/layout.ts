@@ -14,6 +14,11 @@ const LAYOUT = {
   Y_COMPRESSION: 0.65,
   /** 방향 벡터용 단위 구 반경 */
   UNIT_RADIUS: 1,
+  /**
+   * 이 가지 수까지는 기존 반경 유지(시각 회귀 없음). 이를 넘으면 반경을 √(n/baseline)에 비례해 키워
+   * 구면 노드 밀도를 일정하게 유지한다(활용 관점이 최대 16개로 늘어도 타일이 겹치지 않게).
+   */
+  BRANCH_DENSITY_BASELINE: 10,
 } as const;
 
 /**
@@ -36,8 +41,13 @@ export function layoutGraph(graph: GraphSnapshot): Map<string, Vec3> {
 
   const branches = childrenOf.get(center.id) ?? [];
 
+  // 가지가 baseline보다 많으면 반경을 √(n/baseline)로 확대 — 구 표면적 ∝ R²라 각 노드 간격이 일정해진다.
+  const branchRadius =
+    LAYOUT.BRANCH_RADIUS *
+    Math.max(1, Math.sqrt(branches.length / LAYOUT.BRANCH_DENSITY_BASELINE));
+
   branches.forEach((branchId, i) => {
-    const bp = fibonacciSphere(i, branches.length, LAYOUT.BRANCH_RADIUS);
+    const bp = fibonacciSphere(i, branches.length, branchRadius);
     positions.set(branchId, bp);
 
     const leaves = childrenOf.get(branchId) ?? [];
@@ -51,10 +61,10 @@ export function layoutGraph(graph: GraphSnapshot): Map<string, Vec3> {
     });
   });
 
-  // 연결되지 않은 노드는 외곽 링에 배치
+  // 연결되지 않은 노드는 외곽 링에 배치(가지 반경이 커지면 그 바깥으로 함께 밀어낸다)
   graph.nodes.forEach((node, i) => {
     if (!positions.has(node.id)) {
-      const radius = LAYOUT.BRANCH_RADIUS * LAYOUT.ORPHAN_RING_FACTOR;
+      const radius = branchRadius * LAYOUT.ORPHAN_RING_FACTOR;
       positions.set(node.id, fibonacciSphere(i, graph.nodes.length, radius));
     }
   });
