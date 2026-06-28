@@ -155,6 +155,16 @@ describe('analyzeUsage — ADR-0014 Layer 게이트', () => {
     angles: [{ key: 'investment', hook: 'h', report: 'r', sourceRefs: [0] }],
   });
 
+  // 이 게이트는 PERSONAL_USE_MODE=false(기본)일 때만 성립 — 로컬 .env가 ON이어도 테스트는 OFF로 고정(ADR-0018).
+  let originalMode: boolean;
+  beforeEach(() => {
+    originalMode = env.PERSONAL_USE_MODE;
+    env.PERSONAL_USE_MODE = false;
+  });
+  afterEach(() => {
+    env.PERSONAL_USE_MODE = originalMode;
+  });
+
   it('Layer A(네이버·카카오)만 있으면 LLM을 호출하지 않고 null 반환(지출 0)', async () => {
     const layerAOnly: NormalizedItem[] = [
       normalize({ title: '네이버 블로그 후기', url: 'https://blog.naver.com/u/9', snippet: '후기' }, 'blog', 'A', 'a1', NOW),
