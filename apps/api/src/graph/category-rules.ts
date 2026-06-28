@@ -1,4 +1,5 @@
 import type { NodeKind, Source, SubjectType } from '@cerebro/shared';
+import { parseTimestamp } from '../lib/dates.js';
 
 /**
  * 수집 출처(Source)를 노드 카테고리(NodeKind)로 분류한다 — 3D 마인드맵 카테고리 색의 근거.
@@ -73,10 +74,9 @@ function hasMarker(text: string, list: readonly string[]): boolean {
 }
 
 function isRecent(source: Source): boolean {
-  if (!source.publishedAt) return false;
-  const published = Date.parse(source.publishedAt);
-  const collected = Date.parse(source.collectedAt);
-  if (Number.isNaN(published) || Number.isNaN(collected)) return false;
+  const published = parseTimestamp(source.publishedAt);
+  const collected = parseTimestamp(source.collectedAt);
+  if (published === null || collected === null) return false;
   return collected - published <= RECENCY_WINDOW_MS;
 }
 

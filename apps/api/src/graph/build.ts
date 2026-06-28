@@ -9,6 +9,7 @@ import {
 } from '@cerebro/shared';
 import { tokenize, type NormalizedItem } from '../collect/normalize.js';
 import { extractTopics } from '../collect/score.js';
+import { parseTimestamp } from '../lib/dates.js';
 import { classifySource } from './category-rules.js';
 import { buildCenterNode, buildSubject, centerEdges, round2 } from './skeleton.js';
 import type { UsageReport } from '../analyze/report.js';
@@ -187,10 +188,7 @@ function isCategoryKind(kind: NodeKind): kind is CategoryKind {
 
 /** 게시일 기준 최신성 점수(없으면 0). 대표 출처 정렬용. */
 function recency(item: NormalizedItem): number {
-  const published = item.source.publishedAt;
-  if (!published) return 0;
-  const t = Date.parse(published);
-  return Number.isNaN(t) ? 0 : t;
+  return parseTimestamp(item.source.publishedAt) ?? 0;
 }
 
 function mean(values: number[]): number {
