@@ -100,7 +100,7 @@ describe('createSearchOrchestrator (리포트 2단 캐시)', () => {
 
   const VALID_REPORT = JSON.stringify({
     summary: '핵심 요약',
-    angles: [{ key: 'economy', hook: '훅', report: '경제 관점 본문 리포트', sourceRefs: [0] }],
+    angles: [{ label: '경제·산업', hook: '훅', report: '경제 관점 본문 리포트', sourceRefs: [0] }],
   });
 
   /** collect 호출 횟수를 세는 어댑터(데이터 재수집 검증용). */

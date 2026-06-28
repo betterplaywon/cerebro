@@ -92,8 +92,8 @@ describe('buildGraphFromCollection — LLM 활용 관점 그래프 (ADR-0008)', 
     const analysis: UsageReport = {
       summary: '토스는 투자·채용을 확대 중이다.',
       angles: [
-        { key: 'investment', label: '투자 관점', hook: '호재 가능성', report: '투자 유치는 성장 신호.', sourceIds: ['s1'] },
-        { key: 'career', label: '취업·커리어', hook: '채용 확대', report: '구직 기회 증가.', sourceIds: ['s1', 's2'] },
+        { label: '투자 관점', hook: '호재 가능성', report: '투자 유치는 성장 신호.', sourceIds: ['s1'] },
+        { label: '취업·커리어', hook: '채용 확대', report: '구직 기회 증가.', sourceIds: ['s1', 's2'] },
       ],
     };
     const graph = buildGraphFromCollection('토스', 'company', items, NOW, analysis);
@@ -103,9 +103,10 @@ describe('buildGraphFromCollection — LLM 활용 관점 그래프 (ADR-0008)', 
     expect(center?.report).toBe('토스는 투자·채용을 확대 중이다.');
 
     const usage = graph.nodes.filter((n) => n.kind === 'usage');
-    expect(usage.map((n) => n.id)).toEqual(['usage-investment', 'usage-career']);
-    expect(usage.find((n) => n.id === 'usage-investment')?.report).toBe('투자 유치는 성장 신호.');
-    expect(usage.find((n) => n.id === 'usage-investment')?.sourceIds).toEqual(['s1']);
+    expect(usage.map((n) => n.id)).toEqual(['usage-0', 'usage-1']);
+    expect(usage.map((n) => n.label)).toEqual(['투자 관점', '취업·커리어']);
+    expect(usage.find((n) => n.id === 'usage-0')?.report).toBe('투자 유치는 성장 신호.');
+    expect(usage.find((n) => n.id === 'usage-0')?.sourceIds).toEqual(['s1']);
     expect(graph.edges.every((e) => e.source === 'center' && e.relation === '활용')).toBe(true);
 
     // 활용 그래프도 중심→가지 weight = 대상 importance round2 (centerEdges 헬퍼 추출 전 잠금).

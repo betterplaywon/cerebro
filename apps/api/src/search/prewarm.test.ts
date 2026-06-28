@@ -65,7 +65,7 @@ describe('prewarm', () => {
             type: 'text',
             text: JSON.stringify({
               summary: '요약',
-              angles: [{ key: 'economy', hook: '훅', report: '본문', sourceRefs: [0] }],
+              angles: [{ label: '경제·산업', hook: '훅', report: '본문', sourceRefs: [0] }],
             }),
           },
         ],

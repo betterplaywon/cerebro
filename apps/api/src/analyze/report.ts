@@ -17,33 +17,40 @@ import type { BudgetTracker } from './budget.js';
  *  - 근거: ADR-0008, ADR-0011.
  */
 
-/** 후보 활용 관점(주체에 해당되는 것만 선택). key=식별자, label=노드 라벨. */
-export const USAGE_ANGLES = [
-  { key: 'investment', label: '투자 관점' },
-  { key: 'career', label: '취업·커리어' },
-  { key: 'economy', label: '경제·산업' },
-  { key: 'society', label: '사회' },
-  { key: 'health', label: '건강' },
-  { key: 'relationship', label: '관계·접점' },
-  { key: 'shopping', label: '쇼핑' },
-  { key: 'books', label: '도서' },
-  { key: 'content', label: '콘텐츠' },
+/**
+ * 활용 관점은 더 이상 고정 목록에서 고르지 않는다(ADR-0019). LLM이 주제·출처에 맞춰
+ * 라벨을 직접 생성한다. 아래 예시는 프롬프트에 "예시일 뿐"으로 주입돼 다양성을 유도하며,
+ * 산출 라벨을 제약하지 않는다(범용 9칸 enum 강제 → 주제 밀착 동적 생성).
+ */
+const ANGLE_EXAMPLES = [
+  '핵심 사업·제품',
+  '기술·R&D',
+  '시장·경쟁 구도',
+  '실적·재무',
+  '산업·생태계',
+  '규제·정책',
+  '글로벌·지정학',
+  '역사·배경',
+  '사회·문화적 영향',
+  '논란·리스크',
+  '트렌드·전망',
+  '투자',
+  '취업·커리어',
+  '소비자·사용 경험',
 ] as const;
 
-export type UsageAngleKey = (typeof USAGE_ANGLES)[number]['key'];
-const ANGLE_LABELS = Object.fromEntries(USAGE_ANGLES.map((a) => [a.key, a.label])) as Record<
-  UsageAngleKey,
-  string
->;
-const ANGLE_KEYS = USAGE_ANGLES.map((a) => a.key);
-
-/** 분석에 보낼 최대 출처 수(토큰·비용 통제). */
-const MAX_SOURCES = 18;
-const MAX_TOKENS = 4000;
+/** 분석에 보낼 최대 출처 수(토큰·비용 통제). 다양한 관점 도출 재료 확보를 위해 상향(ADR-0019). */
+const MAX_SOURCES = 24;
+/** 출력 토큰 상한. 관점 수↑(최대 9개)에 따른 JSON 절단→파싱실패 폴백을 막기 위해 상향(ADR-0019). */
+const MAX_TOKENS = 6000;
+/** 서로 구별되는 관점 목표 상한(가독성 예산·MAX_BRANCHES와 정합). */
+const MAX_ANGLES = 9;
+/** 노드 라벨 최대 길이(3D 렌더 가독성). 초과분은 절단. */
+const MAX_LABEL_LEN = 24;
 
 /** 정제된 활용 관점 한 건(그래프 노드로 변환됨). */
 export interface UsageAngle {
-  key: UsageAngleKey;
+  /** 주제 밀착 관점 라벨(LLM 생성 → 정제됨). 노드 라벨이 된다. */
   label: string;
   /** 한 줄 핵심(노드 요약) */
   hook: string;
@@ -64,14 +71,14 @@ export interface UsageReport {
  *
  * 짝꿍 `ANALYSIS_JSON_SCHEMA`(아래)와 형태가 일치해야 한다 — 한쪽만 바꾸면 API가 강제하는 형태와
  * 파서가 기대하는 형태가 어긋나 조용히 폴백된다. `report.schema.test.ts`가 둘의 정합성을 잠근다.
- * (SDK의 zodOutputFormat은 enum을 description으로 강등시켜 생성단계 enum 강제가 약해지므로,
- *  하드 enum 와이어 스키마를 유지하기 위해 손으로 쓴 JSON Schema를 둔다 — 단일화 대신 드리프트 잠금.)
+ * (와이어 스키마는 손으로 써서 `additionalProperties:false` 같은 엄격 출력 제약을 명시적으로 둔다 —
+ *  ADR-0019부터 관점 라벨은 동적 자유 문자열이라 enum 강제는 없고, 드리프트 잠금만 유지한다.)
  */
 export const AnalysisSchema = z.object({
   summary: z.string(),
   angles: z.array(
     z.object({
-      key: z.enum(ANGLE_KEYS as [string, ...string[]]),
+      label: z.string(),
       hook: z.string(),
       report: z.string(),
       sourceRefs: z.array(z.number().int()),
@@ -91,9 +98,9 @@ export const ANALYSIS_JSON_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['key', 'hook', 'report', 'sourceRefs'],
+        required: ['label', 'hook', 'report', 'sourceRefs'],
         properties: {
-          key: { type: 'string', enum: ANGLE_KEYS },
+          label: { type: 'string' },
           hook: { type: 'string' },
           report: { type: 'string' },
           sourceRefs: { type: 'array', items: { type: 'integer' } },
@@ -109,17 +116,20 @@ const SYSTEM_PROMPT = [
   '',
   '작업:',
   '1) summary: 출처에서 파악되는 핵심 정보를 3~5문장으로 사실 중심으로 정리한다.',
-  '2) angles: 아래 후보 관점 중 이 주체와 "실제로 관련 있는 것만" 골라, 각 관점에서 이 정보를 어떻게 활용할 수 있는지 구체적으로 서술한다.',
-  '   - 각 report는 단문이 아니라 2~4문장 이상의 리포트처럼 작성한다(왜 그런지, 무엇에 쓸 수 있는지).',
+  '2) angles: 이 주체를 여러 각도로 이해·활용하는 데 의미 있는 "관점"을 가능한 한 다양하게 도출한다. 관점은 고정 목록에서 고르는 것이 아니라, 이 주체와 출처에 맞춰 네가 직접 만든다.',
+  `   - 서로 뚜렷이 구별되는 관점을 ${MAX_ANGLES}개까지 만든다(출처가 풍부하면 6~9개, 빈약하면 적게). 겹치거나 사실상 같은 관점은 하나로 합친다.`,
+  '   - 여러 축을 폭넓게 아우른다. 예: ' +
+    ANGLE_EXAMPLES.join(', ') +
+    ' 등. (이는 예시일 뿐이며, 반드시 이 주체에 밀착된 관점을 새로 만든다.)',
+  '   - label: 그 관점을 압축한 2~12자 한국어 명사구. 막연한 "사회"·"경제"보다 "AI 데이터센터"·"수출 규제 리스크"처럼 주체에 구체적으로 밀착시킨다.',
+  '   - 각 report는 단문이 아니라 2~4문장 이상의 리포트처럼, 그 관점에서 이 정보를 어떻게 읽고 활용할지 구체적으로 서술한다(왜 그런지, 무엇에 쓸 수 있는지).',
   '   - 가독성: summary와 각 report가 3문장 이상이면 논리 단위로 2~3개 문단으로 나누고, 문단 사이는 빈 줄(개행 두 번)로 구분한다. 한 문단은 2~3문장. 마크다운 기호(#, *, - 등)는 쓰지 말 것.',
-  '   - 관련 없는 관점은 절대 포함하지 마라(억지로 채우지 말 것). 출처가 빈약하면 angles를 적게 반환한다.',
-  '   - 각 report는 제공된 출처에 근거해야 한다. 불확실하면 "추정"으로 표시하고, 과장·단정은 피한다.',
-  '   - 투자 관점은 호재/악재 가능성을 논하되, report 끝에 "(투자 조언이 아님)"을 덧붙인다.',
+  '   - 관련 없는 관점은 절대 포함하지 마라(억지로 채우지 말 것). 각 report는 제공된 출처에 근거해야 하며, 불확실하면 "추정"으로 표시하고 과장·단정은 피한다.',
+  '   - 투자·주가·투자가치를 다루는 관점이면 호재/악재 가능성을 논하되, report 끝에 "(투자 조언이 아님)"을 덧붙인다.',
+  '   - hook: 그 관점의 한 줄 핵심(노드 요약).',
   '   - sourceRefs: 그 관점이 근거로 삼은 출처 번호 배열(근거가 없으면 빈 배열).',
   '',
   'PIPA(개인정보보호): 개인은 공인·공개정보에 한정한다. 비공개 개인의 신상 프로파일링 금지. 민감정보(주민번호·연락처·집주소·건강상태·금융·정치/종교/성적지향)는 생성하거나 추론하지 마라.',
-  '',
-  `후보 관점(key: 설명) — ${USAGE_ANGLES.map((a) => `${a.key}(${a.label})`).join(', ')}`,
 ].join('\n');
 
 interface AnalyzeDeps {
@@ -190,17 +200,23 @@ export async function analyzeUsage(
 
   // 출력측 재마스킹(ADR-0014 잔여위험): 입력 스니펫을 마스킹해도 LLM이 산출물에 PII를
   // 생성·추론할 수 있다. 프롬프트 가드(SYSTEM_PROMPT)에 더해, 표시·7일 캐시 적재 전에 한 번 더 거른다.
+  // 라벨도 동적 생성(ADR-0019)이라 동일하게 재마스킹·정제(공백 정규화·길이 상한·중복 제거)한다.
+  const seenLabels = new Set<string>();
   const angles: UsageAngle[] = parsed.angles
-    .filter((a) => a.report.trim().length > 0)
     .map((a) => ({
-      key: a.key as UsageAngleKey,
-      label: ANGLE_LABELS[a.key as UsageAngleKey],
+      label: redactSensitive(a.label).replace(/\s+/g, ' ').trim().slice(0, MAX_LABEL_LEN),
       hook: redactSensitive(a.hook),
       report: redactSensitive(a.report),
       sourceIds: a.sourceRefs
         .map((i) => top[i]?.source.id)
         .filter((id): id is string => typeof id === 'string'),
-    }));
+    }))
+    .filter((a) => {
+      if (a.report.trim().length === 0 || a.label.length === 0) return false;
+      if (seenLabels.has(a.label)) return false; // 동일 라벨 중복 노드 방지
+      seenLabels.add(a.label);
+      return true;
+    });
 
   return { summary: redactSensitive(parsed.summary), angles };
 }
