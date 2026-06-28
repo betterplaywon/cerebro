@@ -19,6 +19,8 @@ export interface CerebroSearch {
   query: string;
   /** 검색 실행 — URL(`?q=`)을 갱신하면 TanStack Query가 페칭·캐시·재시도를 담당 */
   search: (query: string) => void;
+  /** 현재 검색어로 재요청(에러 회복용). URL은 그대로 두고 TanStack Query refetch만 트리거. */
+  retry: () => void;
 }
 
 /** react-query 결과 + 검색어 → 합성된 SearchState. 상태와 데이터의 상관관계를 여기서 한 번에 묶는다. */
@@ -43,5 +45,10 @@ export function useCerebroSearch(): CerebroSearch {
   const [query, search] = useUrlSearchParam('q');
   const result = useQuery(searchQuery(query));
 
-  return { state: toSearchState(query, result), query, search };
+  return {
+    state: toSearchState(query, result),
+    query,
+    search,
+    retry: () => void result.refetch(),
+  };
 }

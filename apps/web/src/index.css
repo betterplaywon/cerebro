@@ -49,8 +49,37 @@ body {
   font-size: 1.25rem;
   letter-spacing: 0.08em;
   margin: 0;
+}
+
+/* 로고 버튼 — 시각은 기존 브랜드 텍스트 그대로, 동작은 "홈으로 리셋". */
+.app__brand-button {
+  font: inherit;
+  letter-spacing: inherit;
+  padding: 0.1rem 0.2rem;
+  margin: -0.1rem -0.2rem; /* 클릭 영역만 넓히고 시각 위치는 유지 */
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
   color: var(--accent);
   text-shadow: 0 0 16px rgba(124, 246, 255, 0.5);
+  cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    text-shadow 0.15s ease;
+}
+
+.app__brand-button:hover:not(:disabled) {
+  text-shadow: 0 0 22px rgba(124, 246, 255, 0.85);
+}
+
+.app__brand-button:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+/* idle(결과 없음)에선 리셋할 것이 없어 비활성 — 단, 브랜드는 흐려 보이지 않게 유지. */
+.app__brand-button:disabled {
+  cursor: default;
 }
 
 .app__main {
@@ -62,16 +91,100 @@ body {
   justify-content: center;
 }
 
-.app__hint,
-.app__error {
+.app__hint {
   color: var(--muted);
   padding: 1rem;
   text-align: center;
   max-width: 36rem;
 }
 
+/* 빈 화면(idle): 안내 문구 + 추천 검색어 칩 */
+.app__idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.suggestions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.suggestions__label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.suggestions__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 32rem;
+}
+
+.suggestions__chip {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.suggestions__chip:hover {
+  border-color: var(--accent-2);
+  color: var(--accent);
+}
+
+.suggestions__chip:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+/* 에러 상태: 메시지 + 다시 시도(회복 수단) */
 .app__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  text-align: center;
+  max-width: 36rem;
+}
+
+.app__error-message {
   color: var(--danger);
+  margin: 0;
+}
+
+.app__retry {
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  color: #04121a;
+  border: 0;
+  padding: 0.5rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app__retry:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
 }
 
 .app__graph {
@@ -121,12 +234,20 @@ body {
   max-width: 560px;
 }
 
+/* 입력칸 + 인라인 지우기(×)를 겹쳐 배치 */
+.searchbar__field {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+
 .searchbar__input {
   flex: 1;
+  width: 100%;
   background: var(--bg-elev);
   border: 1px solid var(--border);
   color: var(--fg);
-  padding: 0.55rem 0.8rem;
+  padding: 0.55rem 2rem 0.55rem 0.8rem; /* 우측은 × 버튼 자리 */
   border-radius: 8px;
   outline: none;
 }
@@ -134,6 +255,34 @@ body {
 .searchbar__input:focus {
   border-color: var(--accent-2);
   box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.18);
+}
+
+.searchbar__clear {
+  position: absolute;
+  right: 0.3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.searchbar__clear:hover {
+  color: var(--fg);
+}
+
+.searchbar__clear:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 1px;
 }
 
 .searchbar__button {
@@ -279,12 +428,28 @@ body {
 }
 
 .detail-panel__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -0.5rem -0.5rem -0.5rem 0; /* 시각 위치 유지하며 탭 영역만 확대 */
   background: transparent;
   border: 0;
+  border-radius: 8px;
   color: var(--muted);
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
+}
+
+.detail-panel__close:hover {
+  color: var(--fg);
+}
+
+.detail-panel__close:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
 }
 
 .detail-panel__summary {
@@ -416,6 +581,45 @@ body {
   color: var(--accent);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* ───────── 지도 안내(하단 중앙): 조작 힌트 / 빈약 결과 ───────── */
+.graph-hint,
+.graph-note {
+  position: absolute;
+  left: 50%;
+  bottom: 0.9rem;
+  transform: translateX(-50%);
+  margin: 0;
+  max-width: min(90vw, 30rem);
+  text-align: center;
+  padding: 0.45rem 0.9rem;
+  background: rgba(11, 16, 32, 0.82);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.76rem;
+  color: var(--muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 조작 힌트는 잠깐 등장 후 시선을 끌지 않도록 은은히 페이드인 */
+.graph-hint {
+  animation: graphHintIn 0.6s ease both;
+}
+
+.graph-note {
+  color: var(--accent-2);
+}
+
+@keyframes graphHintIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ───────── Category legend (좌상단: 색+아이콘+라벨 범례) ───────── */
@@ -592,7 +796,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .cerebro-core,
   .cerebro-scene__canvas,
-  .cerebro-loader__label {
+  .cerebro-loader__label,
+  .graph-hint {
     animation: none;
   }
   .cerebro-loader__label {

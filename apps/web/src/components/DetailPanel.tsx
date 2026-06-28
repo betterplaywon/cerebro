@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { NODE_KIND_LABELS, type GraphNode, type GraphSnapshot } from '@cerebro/shared';
 import { NODE_COLORS, NODE_USAGE_HINTS } from '../lib/colors';
 import { SOURCE_TYPE_LABELS } from '../lib/sources';
@@ -14,12 +14,39 @@ interface DetailPanelProps {
 /** 노드 클릭 시 출처·신뢰도·활용 방법을 보여주는 상세 패널 (HTML 오버레이). */
 export function DetailPanel({ node, graph, onClose }: DetailPanelProps) {
   const sources = graph.sources.filter((s) => node.sourceIds.includes(s.id));
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // a11y: 열릴 때 닫기 버튼으로 포커스 이동(Esc/Tab 동작·스크린리더 인지), Esc로 닫기, 닫힐 때 직전 포커스 복귀.
+  // closePanel은 부모에서 안정 참조(useCallback)라 이 효과는 마운트 시 1회만 실행된다.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [onClose]);
 
   return (
-    <aside className="detail-panel" role="dialog" aria-label={`${node.label} 상세 정보`}>
+    <aside
+      className="detail-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${node.label} 상세 정보`}
+    >
       <header className="detail-panel__header">
         <h2 className="detail-panel__title">{node.label}</h2>
-        <button className="detail-panel__close" onClick={onClose} aria-label="닫기" type="button">
+        <button
+          ref={closeRef}
+          className="detail-panel__close"
+          onClick={onClose}
+          aria-label="닫기"
+          type="button"
+        >
           ×
         </button>
       </header>

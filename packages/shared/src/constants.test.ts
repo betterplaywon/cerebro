@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NODE_KINDS, NODE_KIND_LABELS } from './index.js';
+import { EXAMPLE_QUERIES, NODE_KINDS, NODE_KIND_LABELS } from './index.js';
 
 /**
  * NODE_KIND_LABELS 는 FE(범례·상세패널)와 BE(그래프/폴백 노드 label)가 공유하는
@@ -24,5 +24,21 @@ describe('NODE_KIND_LABELS', () => {
       attribute: '속성',
       usage: '활용 관점',
     });
+  });
+});
+
+/**
+ * EXAMPLE_QUERIES 는 홈 추천칩(FE)과 시드 프리웜(BE)이 공유하는 검색어 예시 SSOT다.
+ * 프리웜 기동 비용 한도(8~15개)와 칩-시드 정합을 이 테스트로 고정한다.
+ */
+describe('EXAMPLE_QUERIES', () => {
+  it('프리웜 기동 비용 한도(8~15개)를 지킨다', () => {
+    expect(EXAMPLE_QUERIES.length).toBeGreaterThanOrEqual(8);
+    expect(EXAMPLE_QUERIES.length).toBeLessThanOrEqual(15);
+  });
+
+  it('빈 문자열·중복이 없다', () => {
+    expect(EXAMPLE_QUERIES.every((q) => q.trim().length > 0)).toBe(true);
+    expect(new Set(EXAMPLE_QUERIES).size).toBe(EXAMPLE_QUERIES.length);
   });
 });
