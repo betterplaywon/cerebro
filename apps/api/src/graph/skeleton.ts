@@ -57,6 +57,7 @@ export function centerEdges(branchNodes: GraphNode[], relation: string): GraphEd
   }));
 }
 
-function round2(n: number): number {
+/** 소수 2자리 반올림. 골격(centerEdges weight)·전략 빌더(build.ts) 공통 헬퍼. */
+export function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
