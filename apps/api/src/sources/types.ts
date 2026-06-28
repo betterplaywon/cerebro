@@ -29,7 +29,6 @@ export interface CollectContext {
   subjectType?: SubjectType;
   /** 어댑터별 최대 수집 개수 */
   limit?: number;
-  signal?: AbortSignal;
 }
 
 /**

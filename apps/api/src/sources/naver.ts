@@ -1,21 +1,12 @@
 import { z } from 'zod';
-import { fetchJson } from '../lib/http.js';
 import { createRateLimiter } from '../lib/rate-limit.js';
-import { stripHtml } from '../lib/text.js';
 import { toIsoDate } from '../lib/dates.js';
 import { env } from '../env.js';
-import type { SourceType } from '@cerebro/shared';
 import type { CollectContext, RawItem, SourceAdapter } from './types.js';
+import { buildRawItem, collectFromEndpoints, type EndpointSpec } from './multi-endpoint.js';
 
 const NAVER_HOST = 'openapi.naver.com';
 const ALLOW_HOSTS = [NAVER_HOST];
-
-interface NaverEndpoint {
-  /** 네이버 검색 API 경로(/v1/search/{path}.json) */
-  readonly path: string;
-  /** 항목별 출처 유형. 생략 시 어댑터 기본('naver'). */
-  readonly sourceType?: SourceType;
-}
 
 /**
  * 수집할 네이버 검색 엔드포인트와 출처 유형 매핑.
@@ -26,7 +17,7 @@ interface NaverEndpoint {
  * 엔드포인트 수만큼 쿼리당 호출이 늘어난다. 30분 캐시로 완화하며,
  * 트래픽 증가 시 활성 엔드포인트 제한을 검토한다(현재는 YAGNI).
  */
-const SEARCH_ENDPOINTS: readonly NaverEndpoint[] = [
+const SEARCH_ENDPOINTS: readonly EndpointSpec[] = [
   { path: 'webkr' },
   { path: 'news' },
   { path: 'blog', sourceType: 'blog' },
@@ -43,6 +34,7 @@ const NaverItemSchema = z.object({
 });
 const NaverResponseSchema = z.object({ items: z.array(NaverItemSchema).optional() });
 type NaverItem = z.infer<typeof NaverItemSchema>;
+type NaverResponse = z.infer<typeof NaverResponseSchema>;
 
 export interface NaverDeps {
   clientId?: string;
@@ -53,8 +45,10 @@ export interface NaverDeps {
 /**
  * 네이버 검색 API 어댑터(키 필요). 헤더 인증(X-Naver-Client-Id/Secret).
  * 키 미설정 시 isEnabled()=false 라 registry에서 자동 제외된다.
+ * 멀티엔드포인트 수집 골격은 collectFromEndpoints 공유(ADR-0016).
  */
 export function createNaverAdapter(deps: NaverDeps = {}): SourceAdapter {
+  // 네이버 쿼터(25k/일·전 엔드포인트 공유) 보호 — 최소 호출 간격 120ms.
   const limiter = createRateLimiter(120);
 
   return {
@@ -63,37 +57,34 @@ export function createNaverAdapter(deps: NaverDeps = {}): SourceAdapter {
     layer: 'A', // 약관상 표시·단순캐시 전용 — LLM 재가공·7일 캐시·수익화 금지. ADR-0014.
     requiresKey: true,
     isEnabled: () => Boolean(deps.clientId && deps.clientSecret),
-    async collect({ query, limit = 6, signal }: CollectContext): Promise<RawItem[]> {
+    async collect({ query, limit = 6 }: CollectContext): Promise<RawItem[]> {
       if (!deps.clientId || !deps.clientSecret) return [];
-
-      const headers: Record<string, string> = {
-        'X-Naver-Client-Id': deps.clientId,
-        'X-Naver-Client-Secret': deps.clientSecret,
-        accept: 'application/json',
-      };
       const display = Math.max(1, Math.min(20, limit));
 
-      const perType = await Promise.allSettled(
-        SEARCH_ENDPOINTS.map(async ({ path, sourceType }) => {
-          await limiter.acquire();
-          const url =
-            `https://${NAVER_HOST}/v1/search/${path}.json` +
-            `?query=${encodeURIComponent(query)}&display=${display}`;
-          const data = await fetchJson(url, {
-            allowHosts: ALLOW_HOSTS,
-            timeoutMs: 5000,
-            signal,
-            fetchImpl: deps.fetchImpl,
-            headers,
-            schema: NaverResponseSchema,
-          });
-          return (data?.items ?? [])
-            .map((item) => toRawItem(item, sourceType))
-            .filter((x): x is RawItem => x !== null);
-        }),
-      );
-
-      return perType.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+      return collectFromEndpoints<NaverResponse, NaverItem>({
+        endpoints: SEARCH_ENDPOINTS,
+        limiter,
+        allowHosts: ALLOW_HOSTS,
+        headers: {
+          'X-Naver-Client-Id': deps.clientId,
+          'X-Naver-Client-Secret': deps.clientSecret,
+          accept: 'application/json',
+        },
+        fetchImpl: deps.fetchImpl,
+        schema: NaverResponseSchema,
+        buildUrl: (path) =>
+          `https://${NAVER_HOST}/v1/search/${path}.json` +
+          `?query=${encodeURIComponent(query)}&display=${display}`,
+        extractItems: (data) => data.items ?? [],
+        toRawItem: (item, sourceType) =>
+          buildRawItem({
+            url: item.link,
+            title: item.title,
+            snippet: item.description,
+            publishedAt: toIsoDate(item.pubDate),
+            sourceType,
+          }),
+      });
     },
   };
 }
@@ -102,22 +93,3 @@ export const naverAdapter = createNaverAdapter({
   clientId: env.NAVER_CLIENT_ID,
   clientSecret: env.NAVER_CLIENT_SECRET,
 });
-
-function toRawItem(item: NaverItem, sourceType: SourceType | undefined): RawItem | null {
-  if (!item.link || !item.title) return null;
-  try {
-    new URL(item.link);
-  } catch {
-    return null;
-  }
-  // HTML 태그만 있던 제목은 stripHtml 후 빈 문자열이 된다 → 빈 라벨 노드 방지(kakao 어댑터와 동일 가드).
-  const title = stripHtml(item.title);
-  if (!title) return null;
-  return {
-    title,
-    url: item.link,
-    snippet: stripHtml(item.description ?? '') || undefined,
-    publishedAt: toIsoDate(item.pubDate),
-    sourceType,
-  };
-}
