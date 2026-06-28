@@ -224,8 +224,9 @@ function CameraRig({ radius }: { radius: number }) {
   return null;
 }
 
-/** 3D 마인드맵: 글로우 코어 + 글래스 아이콘 타일 + 글로우 가지 + 절제된 Bloom. 클릭 시 해당 노드로 포커스. */
-export function MindMapCanvas({ graph, selectedId, onSelect }: MindMapCanvasProps) {
+/** 캔버스 내부 씬 그래프(라이트·엣지·노드 3계층·카메라 리그·후처리).
+ *  `<Canvas>`와 분리해 실 WebGL 없이 test-renderer로 씬 구조를 검증할 수 있게 한다. */
+export function MindMapScene({ graph, selectedId, onSelect }: MindMapCanvasProps) {
   const positions = useMemo(() => layoutGraph(graph), [graph]);
   const boundingRadius = useMemo(() => graphRadius(positions), [positions]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -243,11 +244,7 @@ export function MindMapCanvas({ graph, selectedId, onSelect }: MindMapCanvasProp
   const selectedPos = selectedId ? (positions.get(selectedId) ?? null) : null;
 
   return (
-    <Canvas
-      camera={{ position: SCENE.camera.position, fov: SCENE.camera.fov }}
-      dpr={SCENE.dpr}
-      gl={{ alpha: true, antialias: true }}
-    >
+    <>
       <ambientLight intensity={SCENE.lights.ambient} />
       <pointLight position={SCENE.lights.key.position} intensity={SCENE.lights.key.intensity} />
       <pointLight
@@ -321,6 +318,19 @@ export function MindMapCanvas({ graph, selectedId, onSelect }: MindMapCanvasProp
         />
         <Vignette offset={SCENE.vignette.offset} darkness={SCENE.vignette.darkness} />
       </EffectComposer>
+    </>
+  );
+}
+
+/** 3D 마인드맵: `<Canvas>` 설정 + 씬. 글로우 코어 + 글래스 아이콘 타일 + 글로우 가지 + 절제된 Bloom. */
+export function MindMapCanvas(props: MindMapCanvasProps) {
+  return (
+    <Canvas
+      camera={{ position: SCENE.camera.position, fov: SCENE.camera.fov }}
+      dpr={SCENE.dpr}
+      gl={{ alpha: true, antialias: true }}
+    >
+      <MindMapScene {...props} />
     </Canvas>
   );
 }
