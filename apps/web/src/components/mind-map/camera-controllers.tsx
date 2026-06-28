@@ -14,19 +14,21 @@ export interface OrbitLike {
 }
 
 /** FocusController·CameraRig가 공유하는 카메라/뷰포트/컨트롤 핸들 취득.
- *  OrbitControls는 R3F state(`controls`)에 느슨히 타이핑돼 있어 OrbitLike 단언을 이 한곳으로 모은다. */
+ *  OrbitControls는 R3F state(`controls`)에 느슨히 타이핑돼 있어 OrbitLike 단언을 이 한곳으로 모은다.
+ *  invalidate: frameloop="demand"에서 카메라를 바꾼 뒤 1프레임 렌더를 예약한다(컨트롤러 공통 필요). */
 function useOrbitHandles() {
   const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
   const controls = useThree((s) => s.controls) as OrbitLike | null;
-  return { camera, size, controls };
+  const invalidate = useThree((s) => s.invalidate);
+  return { camera, size, controls, invalidate };
 }
 
 /** 노드 선택 시 카메라를 그 노드로 "포커스": 회전 중심(target)과 카메라 위치를 함께 보간해
  *  클릭한 노드를 화면 **중앙**에 두고, 현재 시야 방향을 유지한 채 **일정한 근접 거리로 확대**한다.
  *  → 멀리 있던 노드는 가까이 날아들며 확대되고, 정착하면 멈춰 사용자 조작을 방해하지 않는다. */
 export function FocusController({ target }: { target: Vec3 | null }) {
-  const { camera, size, controls } = useOrbitHandles();
+  const { camera, size, controls, invalidate } = useOrbitHandles();
 
   const destTarget = useMemo(
     () => (target ? new Vector3(target[0], target[1], target[2]) : null),
@@ -49,7 +51,8 @@ export function FocusController({ target }: { target: Vec3 | null }) {
     const fov = camera instanceof PerspectiveCamera ? camera.fov : SCENE.camera.fov;
     const distance = fitCameraDistance(SCENE.focus.radius, fov, aspect, SCENE.fit.margin);
     destPos.current = destTarget.clone().addScaledVector(viewDir, distance);
-  }, [destTarget, controls, camera, size.width, size.height]);
+    invalidate(); // demand 모드: 포커스 비행 애니메이션을 시작하도록 렌더 루프를 깨운다.
+  }, [destTarget, controls, camera, size.width, size.height, invalidate]);
 
   useFrame(() => {
     if (!controls || !destTarget || !destPos.current || settled.current) return;
@@ -59,6 +62,7 @@ export function FocusController({ target }: { target: Vec3 | null }) {
     const centered = controls.target.distanceTo(destTarget) < SCENE.focus.settleDistance;
     const zoomed = camera.position.distanceTo(destPos.current) < SCENE.focus.settleDistance;
     if (centered && zoomed) settled.current = true;
+    else invalidate(); // 정착 전까지 다음 프레임을 계속 예약(demand 모드에서 연속 보간 유지).
   });
   return null;
 }
@@ -66,7 +70,7 @@ export function FocusController({ target }: { target: Vec3 | null }) {
 /** 그래프 바운딩 구를 종횡비에 맞춰 프레이밍 — three.js fov는 세로 화각이라 세로 화면(모바일)에선
  *  가로가 잘린다. 마운트·리사이즈 시 카메라 거리를 자동 조정한다(현재 시야 방향은 보존). */
 export function CameraRig({ radius }: { radius: number }) {
-  const { camera, size, controls } = useOrbitHandles();
+  const { camera, size, controls, invalidate } = useOrbitHandles();
   useEffect(() => {
     if (!(camera instanceof PerspectiveCamera)) return;
     const aspect = size.width / Math.max(size.height, 1);
@@ -78,6 +82,7 @@ export function CameraRig({ radius }: { radius: number }) {
     camera.position.copy(target).addScaledVector(dir, distance);
     camera.updateProjectionMatrix();
     controls?.update();
-  }, [radius, size.width, size.height, camera, controls]);
+    invalidate(); // demand 모드: 마운트·리사이즈 시 변경된 프레이밍을 1프레임 렌더.
+  }, [radius, size.width, size.height, camera, controls, invalidate]);
   return null;
 }

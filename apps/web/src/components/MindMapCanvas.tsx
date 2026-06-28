@@ -93,13 +93,19 @@ export function MindMapScene({ graph, selectedId, onSelect }: MindMapCanvasProps
   );
 }
 
-/** 3D 마인드맵: `<Canvas>` 설정 + 씬. 글로우 코어 + 글래스 아이콘 타일 + 글로우 가지 + 절제된 Bloom. */
+/** 3D 마인드맵: `<Canvas>` 설정 + 씬. 글로우 코어 + 글래스 아이콘 타일 + 글로우 가지 + 절제된 Bloom.
+ *  frameloop="demand": 결과 뷰는 대부분 정적이라 매프레임 렌더(기본 always)는 Bloom 풀파이프라인을
+ *  유휴 중에도 60fps로 돌려 GPU·배터리를 낭비한다. 렌더는 변화가 있을 때만 — OrbitControls(makeDefault)
+ *  조작·리사이즈는 R3F가 자동 invalidate하고, 카메라 포커스 비행(FocusController)만 수동으로 깨운다.
+ *  antialias:false: EffectComposer가 멀티샘플 RT로 씬 AA를 담당하므로 컨텍스트 MSAA 백버퍼는
+ *  이득 0의 이중 할당이다(자매 CerebroScene과 동일 설정). */
 export function MindMapCanvas(props: MindMapCanvasProps) {
   return (
     <Canvas
+      frameloop="demand"
       camera={{ position: SCENE.camera.position, fov: SCENE.camera.fov }}
       dpr={SCENE.dpr}
-      gl={{ alpha: true, antialias: true }}
+      gl={{ alpha: true, antialias: false }}
     >
       <MindMapScene {...props} />
     </Canvas>
