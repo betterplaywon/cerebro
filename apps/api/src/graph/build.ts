@@ -1,7 +1,6 @@
 import {
   GRAPH_LIMITS,
   NODE_KIND_LABELS,
-  type GraphEdge,
   type GraphNode,
   type GraphSnapshot,
   type NodeKind,
@@ -11,6 +10,7 @@ import {
 import { tokenize, type NormalizedItem } from '../collect/normalize.js';
 import { extractTopics } from '../collect/score.js';
 import { classifySource } from './category-rules.js';
+import { buildCenterNode, buildSubject, centerEdges } from './skeleton.js';
 import type { UsageReport } from '../analyze/report.js';
 
 /** 색이 입혀지는 카테고리 가지(중심·concept·attribute 제외). emit 순서 = 표시 우선순위. */
@@ -55,33 +55,22 @@ function buildHeuristicGraph(
   sources: Source[],
   generatedAt: string,
 ): GraphSnapshot {
-  const center: GraphNode = {
-    id: 'center',
-    label: query,
-    kind: 'center',
+  const center = buildCenterNode({
+    query,
     summary: `'${query}'에 대한 공개정보 마인드맵`,
-    importance: 1,
-    confidence: 0.9,
     sourceIds: sources.slice(0, 1).map((s) => s.id),
-  };
+  });
 
   const categoryNodes = buildCategoryNodes(query, subjectType, items);
   const conceptBudget = clamp(MAX_BRANCHES - categoryNodes.length, 2, 8);
   const conceptNodes = buildConceptNodes(query, items, conceptBudget);
 
   const branchNodes = [...categoryNodes, ...conceptNodes];
-  const edges: GraphEdge[] = branchNodes.map((node) => ({
-    id: `e-center-${node.id}`,
-    source: 'center',
-    target: node.id,
-    relation: '관련',
-    weight: round2(node.importance),
-  }));
 
   return {
-    subject: { id: 'subject-1', query, type: subjectType ?? 'unknown', displayName: query },
+    subject: buildSubject(query, subjectType),
     nodes: [center, ...branchNodes],
-    edges,
+    edges: centerEdges(branchNodes, '관련'),
     sources,
     generatedAt,
   };
@@ -103,16 +92,12 @@ function buildUsageGraph(
 ): GraphSnapshot {
   const sourceById = new Map(sources.map((s) => [s.id, s]));
 
-  const center: GraphNode = {
-    id: 'center',
-    label: query,
-    kind: 'center',
+  const center = buildCenterNode({
+    query,
     summary: `'${query}' 공개정보 분석`,
     report: analysis.summary,
-    importance: 1,
-    confidence: 0.9,
     sourceIds: sources.slice(0, 3).map((s) => s.id),
-  };
+  });
 
   const angleNodes: GraphNode[] = analysis.angles.slice(0, MAX_BRANCHES).map((angle, i) => {
     const cited = angle.sourceIds.filter((id) => sourceById.has(id));
@@ -131,18 +116,10 @@ function buildUsageGraph(
     };
   });
 
-  const edges: GraphEdge[] = angleNodes.map((node) => ({
-    id: `e-center-${node.id}`,
-    source: 'center',
-    target: node.id,
-    relation: '활용',
-    weight: round2(node.importance),
-  }));
-
   return {
-    subject: { id: 'subject-1', query, type: subjectType ?? 'unknown', displayName: query },
+    subject: buildSubject(query, subjectType),
     nodes: [center, ...angleNodes],
-    edges,
+    edges: centerEdges(angleNodes, '활용'),
     sources,
     generatedAt,
   };
