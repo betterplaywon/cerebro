@@ -110,7 +110,9 @@ export function HeroPortrait({ layout }: { layout: CrowdLayout }) {
     if (u) {
       u.uDesat.value = tl.heroColorT;
       u.uOpacity.value = tl.heroOpacity;
-      u.uBurst.value = tl.flash / SCENE.intro.burstPeak;
+      // 글로우 세기(flash)에 직접 비례 — burstPeak를 낮추면 히어로 백색 리프트도 함께 은은해진다
+      // (정규화로 항상 만개시키지 않음 → 배경이 거의 밝아지지 않는데 히어로만 새하얗게 튀는 부조화 방지).
+      u.uBurst.value = tl.flash;
     }
     const mesh = meshRef.current;
     if (mesh) {

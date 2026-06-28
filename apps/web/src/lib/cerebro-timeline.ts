@@ -57,25 +57,26 @@ export const SCENE = {
     crowdFar: '#5fc8ff', // 먼 인물(시안)
   },
   fog: { near: 4, far: 140 }, // 히어로 StandardMaterial 전용 (군중 raw 셰이더는 무시)
-  bloom: { intensity: 0.7, intensityBurst: 1.6, threshold: 0.2, smoothing: 0.9 },
+  bloom: { intensity: 0.7, intensityBurst: 0.95, threshold: 0.2, smoothing: 0.9 },
   vignette: { offset: 0.3, darkness: 0.65 }, // void 프레이밍
   intro: {
     total: 6.0,
     p0End: 1.6, // 근접(Frame01)
     p1End: 3.0, // 탈색·풀백(Frame02)
-    p2End: 3.6, // 백색 버스트(Frame03)
+    p2End: 3.6, // 부드러운 글로우 절정(Frame03)
     burstCenter: 3.3,
-    burstHalf: 0.3, // 단일 펄스 폭(스트로브 아님)
-    burstPeak: 0.85,
-    bgWhiteHalf: 0.55, // 배경 화이트닝은 버스트보다 약간 길게
+    // 펄스 폭이 넓을수록 휘도 변화가 느리고 완만하다 → 번쩍이는 섬광이 아닌 은은한 글로우(ADR-0020).
+    burstHalf: 0.6,
+    // 글로우 세기 상한 — 전체화면 백색 플래시 대신 군중·히어로를 살짝 밝히는 빛 번짐.
+    burstPeak: 0.28,
+    bgWhiteHalf: 0.9, // 배경 글로우는 버스트보다 더 길고 완만하게
+    // 배경/포그를 burst 화이트로 보간하는 상한 — 전체화면이 흰색으로 튀는 일반 플래시 방지.
+    bgWhitePeak: 0.12,
   },
   loop: {
     cycle: 9.0,
     pushEnd: 3.5, // 한 명 주목(천천히 접근)
     pullEnd: 5.0, // 급속 후퇴
-    miniFlashPeak: 0.25, // 후퇴 시 약한 섬광(스트로브 임계 이하)
-    miniFlashCenter: 3.7,
-    miniFlashHalf: 0.3,
     driftSpeed: 0.12, // 유영 미세 회전
     focusDist: 5.0, // = minApproach: 주목 인물과 카메라 거리
   },
@@ -102,9 +103,9 @@ export interface TimelineState {
   /** 0=풀컬러, 1=회색(탈색). */
   heroColorT: number;
   heroOpacity: number;
-  /** 0..burstPeak — 군중 uFlash + Bloom 세기로 사용. */
+  /** 0..burstPeak — 군중 uFlash + Bloom 세기 + 히어로 백색 리프트로 사용. */
   flash: number;
-  /** 0..1 — 배경/포그를 burst 화이트로 보간. */
+  /** 0..bgWhitePeak — 배경/포그를 burst 화이트로 보간(상한이 낮아 전체화면 플래시 방지). */
   bgWhiteT: number;
   /** 0..1 — 군중 페이드인 게이트. */
   uReveal: number;
@@ -217,7 +218,7 @@ function introState(t: number, candidates: number[]): TimelineState {
   const heroColorT = seg(t, I.p0End, I.p1End); // 1.6s부터 3.0s까지 0→1 탈색
   const heroOpacity = 1 - seg(t, SCENE.hero.fadeStart, SCENE.hero.fadeEnd);
   const flash = I.burstPeak * bell(t, I.burstCenter, I.burstHalf);
-  const bgWhiteT = bell(t, I.burstCenter, I.bgWhiteHalf);
+  const bgWhiteT = I.bgWhitePeak * bell(t, I.burstCenter, I.bgWhiteHalf);
 
   let uReveal: number;
   if (t < I.p0End) uReveal = 0;
@@ -251,14 +252,12 @@ function loopState(lt: number, candidates: number[]): TimelineState {
 
   let camMode: CamMode;
   let focusBlend: number;
-  let flash = 0;
   if (tt < L.pushEnd) {
     camMode = 'focus';
     focusBlend = easeInOutSine(seg(tt, 0, L.pushEnd));
   } else if (tt < L.pullEnd) {
     camMode = 'pullback';
     focusBlend = 1 - easeOutQuint(seg(tt, L.pushEnd, L.pullEnd));
-    flash = L.miniFlashPeak * bell(tt, L.miniFlashCenter, L.miniFlashHalf);
   } else {
     camMode = 'drift';
     focusBlend = 0;
@@ -275,8 +274,9 @@ function loopState(lt: number, candidates: number[]): TimelineState {
     driftAngle: lt * L.driftSpeed + cyc * 0.7,
     heroColorT: 1,
     heroOpacity: 0,
-    flash,
-    bgWhiteT: flash * 0.4,
+    // 루프엔 섬광 없음 — 로딩이 길어져도 9초마다 반복되던 미니플래시를 제거(카메라 주목/후퇴 연출만 유지).
+    flash: 0,
+    bgWhiteT: 0,
     uReveal: 1,
     spotStrength: focusBlend,
   };

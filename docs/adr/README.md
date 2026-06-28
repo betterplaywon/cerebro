@@ -23,3 +23,5 @@
 | [0016](./0016-multi-endpoint-adapter-helper.md) | 멀티엔드포인트 검색 어댑터 공유 헬퍼 추출 | Accepted |
 | [0017](./0017-ratelimiter-token-bucket-burst.md) | 레이트 리미터 캡-버스트 토큰 버킷 (인트라-검색 스태거 제거) | Accepted |
 | [0018](./0018-personal-use-mode.md) | 개인 전용 모드: 비공개·비영리 인스턴스에서 Layer A를 LLM 리포트에 재포함 | Accepted |
+| [0019](./0019-dynamic-usage-facets.md) | 활용 관점을 고정 9개 enum에서 주제 동적 생성으로 전환 | Accepted |
+| [0020](./0020-loader-flash-to-glow.md) | 로딩 백색 버스트를 부드러운 글로우로 전환(접근성) | Accepted |
