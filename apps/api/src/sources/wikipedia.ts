@@ -32,7 +32,7 @@ export function createWikipediaAdapter(deps: { fetchImpl?: typeof fetch } = {}):
     layer: 'B', // CC BY-SA — 재가공·저장·수익화 허용(LLM 리포트·7일 캐시 입력 가능). ADR-0014.
     requiresKey: false,
     isEnabled: () => true,
-    async collect({ query, limit = 8, signal }: CollectContext): Promise<RawItem[]> {
+    async collect({ query, limit = 8 }: CollectContext): Promise<RawItem[]> {
       await limiter.acquire();
 
       const url =
@@ -42,7 +42,6 @@ export function createWikipediaAdapter(deps: { fetchImpl?: typeof fetch } = {}):
       const data = await fetchJson(url, {
         allowHosts: ALLOW_HOSTS,
         timeoutMs: 5000,
-        signal,
         fetchImpl: deps.fetchImpl,
         headers: { accept: 'application/json', 'user-agent': USER_AGENT },
         retries: 2,

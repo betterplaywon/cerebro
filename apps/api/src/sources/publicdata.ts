@@ -73,7 +73,7 @@ export function createPublicDataAdapter(deps: PublicDataDeps = {}): SourceAdapte
     layer: 'B', // 이용허락범위 '제한 없음'(상업 OK) — LLM 리포트·7일 캐시 입력 가능. ADR-0015.
     requiresKey: true,
     isEnabled: () => Boolean(deps.serviceKey),
-    async collect({ query, signal }: CollectContext): Promise<RawItem[]> {
+    async collect({ query }: CollectContext): Promise<RawItem[]> {
       if (!deps.serviceKey) return [];
       await limiter.acquire();
 
@@ -87,7 +87,6 @@ export function createPublicDataAdapter(deps: PublicDataDeps = {}): SourceAdapte
       const data = await fetchJson(url, {
         allowHosts: ALLOW_HOSTS,
         timeoutMs: 5000,
-        signal,
         fetchImpl: deps.fetchImpl,
         headers: { accept: 'application/json' },
         retries: 2,
