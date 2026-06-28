@@ -24,6 +24,9 @@ type WikiSearchPage = z.infer<typeof WikiSearchPageSchema>;
  * 모든 외부 호출은 SSRF-safe fetch + rate limit + 지수 백오프를 거친다.
  */
 export function createWikipediaAdapter(deps: { fetchImpl?: typeof fetch } = {}): SourceAdapter {
+  // 단일 엔드포인트(쿼리당 1회)라 호출 간격은 정중함 수준(300ms)으로 충분.
+  // 재시도 2회: Layer B는 일일 쿼터 압박이 없어 일시적 오류엔 회복력을 우선한다
+  // (네이버/카카오 Layer A는 쿼터 절약 위해 fetchJson 기본 1회).
   const limiter = createRateLimiter(300);
 
   return {
@@ -41,7 +44,6 @@ export function createWikipediaAdapter(deps: { fetchImpl?: typeof fetch } = {}):
 
       const data = await fetchJson(url, {
         allowHosts: ALLOW_HOSTS,
-        timeoutMs: 5000,
         fetchImpl: deps.fetchImpl,
         headers: { accept: 'application/json', 'user-agent': USER_AGENT },
         retries: 2,

@@ -36,6 +36,9 @@ export interface SafeFetchOptions {
   fetchImpl?: typeof fetch;
 }
 
+/** 기본 요청 타임아웃(ms). 어댑터가 timeoutMs를 안 주면 이 값 — 전 소스 공통 정책의 단일 출처. */
+const DEFAULT_TIMEOUT_MS = 5000;
+
 const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/;
 
 function isIpLiteral(host: string): boolean {
@@ -87,7 +90,7 @@ export async function safeFetch(rawUrl: string, opts: SafeFetchOptions): Promise
   const timer = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, opts.timeoutMs ?? 5000);
+  }, opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   const onExternalAbort = () => controller.abort();
   opts.signal?.addEventListener('abort', onExternalAbort, { once: true });
 

@@ -65,6 +65,8 @@ export interface PublicDataDeps {
 }
 
 export function createPublicDataAdapter(deps: PublicDataDeps = {}): SourceAdapter {
+  // 단일 엔드포인트(쿼리당 1회)라 호출 간격은 정중함 수준(300ms)으로 충분.
+  // 재시도 2회: Layer B는 일일 쿼터 압박이 없어 일시적 오류엔 회복력을 우선한다.
   const limiter = createRateLimiter(300);
 
   return {
@@ -86,7 +88,6 @@ export function createPublicDataAdapter(deps: PublicDataDeps = {}): SourceAdapte
 
       const data = await fetchJson(url, {
         allowHosts: ALLOW_HOSTS,
-        timeoutMs: 5000,
         fetchImpl: deps.fetchImpl,
         headers: { accept: 'application/json' },
         retries: 2,
