@@ -18,7 +18,8 @@ interface RawItemDraft {
 /**
  * 외부 검색 항목 → RawItem 가드 단일화(naver/kakao 공유).
  * url·title 누락, new URL 실패, HTML 태그만이라 stripHtml 후 빈 제목 → 모두 null
- * (잘못된 링크·빈 라벨 노드 방지). 신뢰불가 외부 url+title을 받는 어댑터의 보안 가드를 한 곳에 모은다.
+ * (잘못된 링크·빈 라벨 노드 방지). url 형식·빈 제목 가드를 한 곳에 모아 드리프트를 막는다.
+ * (위험 스킴 javascript:/data: 차단은 별도 — 수집 경계 orchestrator의 isHttpUrl이 담당.)
  */
 export function buildRawItem(draft: RawItemDraft): RawItem | null {
   const { url, title, snippet, publishedAt, sourceType } = draft;
