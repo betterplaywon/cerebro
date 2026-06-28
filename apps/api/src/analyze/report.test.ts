@@ -84,8 +84,8 @@ describe('analyzeUsage', () => {
     const payload = JSON.stringify({
       summary: '토스는 투자 유치와 채용을 확대하고 있다.',
       angles: [
-        { key: 'investment', hook: '호재 가능성', report: '투자 유치는 성장 신호다. (투자 조언이 아님)', sourceRefs: [0, 1] },
-        { key: 'career', hook: '채용 확대', report: '개발자 채용이 늘고 있어 구직 기회가 된다.', sourceRefs: [1] },
+        { label: '투자 관점', hook: '호재 가능성', report: '투자 유치는 성장 신호다. (투자 조언이 아님)', sourceRefs: [0, 1] },
+        { label: '취업·커리어', hook: '채용 확대', report: '개발자 채용이 늘고 있어 구직 기회가 된다.', sourceRefs: [1] },
       ],
     });
     const { client, create } = mockClient(payload);
@@ -96,18 +96,18 @@ describe('analyzeUsage', () => {
     expect(result!.summary).toContain('토스');
     expect(result!.angles).toHaveLength(2);
 
-    const investment = result!.angles.find((a) => a.key === 'investment');
+    const investment = result!.angles.find((a) => a.label === '투자 관점');
     expect(investment?.label).toBe('투자 관점');
     expect(investment?.sourceIds).toEqual(['s1', 's2']);
 
-    const career = result!.angles.find((a) => a.key === 'career');
+    const career = result!.angles.find((a) => a.label === '취업·커리어');
     expect(career?.sourceIds).toEqual(['s2']);
   });
 
   it('범위를 벗어난 sourceRefs는 버린다(존재하는 출처만 연결)', async () => {
     const payload = JSON.stringify({
       summary: '요약',
-      angles: [{ key: 'investment', hook: 'h', report: 'r', sourceRefs: [0, 99] }],
+      angles: [{ label: '투자 관점', hook: 'h', report: 'r', sourceRefs: [0, 99] }],
     });
     const { client } = mockClient(payload);
     const result = await analyzeUsage('토스', sampleItems(), { client });
@@ -118,14 +118,14 @@ describe('analyzeUsage', () => {
     const payload = JSON.stringify({
       summary: '요약',
       angles: [
-        { key: 'investment', hook: 'h', report: '실제 본문', sourceRefs: [0] },
-        { key: 'career', hook: 'h', report: '   ', sourceRefs: [1] },
+        { label: '투자 관점', hook: 'h', report: '실제 본문', sourceRefs: [0] },
+        { label: '취업·커리어', hook: 'h', report: '   ', sourceRefs: [1] },
       ],
     });
     const { client } = mockClient(payload);
     const result = await analyzeUsage('토스', sampleItems(), { client });
     expect(result!.angles).toHaveLength(1);
-    expect(result!.angles[0]?.key).toBe('investment');
+    expect(result!.angles[0]?.label).toBe('투자 관점');
   });
 
   it('안전성 거부(refusal)면 null을 반환한다', async () => {
@@ -137,7 +137,7 @@ describe('analyzeUsage', () => {
     const payload = JSON.stringify({
       summary: '대표 연락처는 010-1234-5678 이다.',
       angles: [
-        { key: 'investment', hook: '문의 hong@test.com', report: '주민번호 900101-1234567 노출', sourceRefs: [0] },
+        { label: '투자 관점', hook: '문의 hong@test.com', report: '주민번호 900101-1234567 노출', sourceRefs: [0] },
       ],
     });
     const { client } = mockClient(payload);
@@ -152,7 +152,7 @@ describe('analyzeUsage', () => {
 describe('analyzeUsage — ADR-0014 Layer 게이트', () => {
   const VALID = JSON.stringify({
     summary: '요약',
-    angles: [{ key: 'investment', hook: 'h', report: 'r', sourceRefs: [0] }],
+    angles: [{ label: '투자 관점', hook: 'h', report: 'r', sourceRefs: [0] }],
   });
 
   // 이 게이트는 PERSONAL_USE_MODE=false(기본)일 때만 성립 — 로컬 .env가 ON이어도 테스트는 OFF로 고정(ADR-0018).
@@ -198,7 +198,7 @@ describe('analyzeUsage — ADR-0014 Layer 게이트', () => {
 describe('analyzeUsage — ADR-0018 개인 전용 모드', () => {
   const VALID = JSON.stringify({
     summary: '요약',
-    angles: [{ key: 'investment', hook: 'h', report: 'r', sourceRefs: [0, 1] }],
+    angles: [{ label: '투자 관점', hook: 'h', report: 'r', sourceRefs: [0, 1] }],
   });
 
   // 이 블록만 개인 전용 모드 ON(기본 OFF는 위 ADR-0014 게이트 테스트가 커버). 종료 시 원복.
@@ -244,7 +244,7 @@ describe('analyzeUsage — ADR-0018 개인 전용 모드', () => {
 describe('analyzeUsage — 예산 서킷 브레이커', () => {
   const VALID = JSON.stringify({
     summary: '요약',
-    angles: [{ key: 'investment', hook: 'h', report: 'r', sourceRefs: [0] }],
+    angles: [{ label: '투자 관점', hook: 'h', report: 'r', sourceRefs: [0] }],
   });
 
   it('서킷이 열린(예산 소진) 상태면 client.messages.create를 호출하지 않고 null 반환(지출 0)', async () => {

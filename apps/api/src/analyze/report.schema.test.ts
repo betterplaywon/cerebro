@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { AnalysisSchema, ANALYSIS_JSON_SCHEMA, USAGE_ANGLES } from './report.js';
+import { AnalysisSchema, ANALYSIS_JSON_SCHEMA } from './report.js';
 
 /**
  * 드리프트 잠금: zod `AnalysisSchema`와 손으로 쓴 `ANALYSIS_JSON_SCHEMA`가 어긋나면 실패한다.
- * 둘을 단일소스화하지 않는 이유: SDK의 zodOutputFormat은 enum을 description으로 강등시켜
- * 생성단계 enum 강제가 약해진다(리포트 전체 폴백 위험↑). 그래서 하드 enum 와이어 스키마를
- * 손으로 유지하되, 이 테스트가 두 표현의 정합성을 **양방향**으로 잠근다.
+ * 둘을 단일소스화하지 않는 이유: API output_config에 넘기는 와이어 스키마(JSON Schema)와 파서가
+ * 기대하는 형태(zod)가 한쪽만 바뀌면 조용히 폴백되기 때문 — 이 테스트가 두 표현을 **양방향**으로 잠근다.
  *
- * 핵심: 기대값을 손으로 쓴 리터럴이 아니라 **zod 스키마에서 도출**해야 zod 측 변경(타입·옵셔널화)도 잡는다.
+ * ADR-0019: 관점(angle)은 고정 enum이 아니라 LLM이 동적으로 생성한 `label`(자유 문자열)이다.
+ * 따라서 enum 정합 잠금은 제거하고, 라벨이 enum 제약 없는 자유 문자열임을 검증한다.
+ * 키집합·타입·required·additionalProperties 드리프트 잠금은 그대로 유지한다.
  */
 const topShape = AnalysisSchema.shape;
 const angleShape = AnalysisSchema.shape.angles.element.shape;
-const enumOptions = [...AnalysisSchema.shape.angles.element.shape.key.options];
 
 const topShapeMap = topShape as Record<string, z.ZodTypeAny>;
 const angleShapeMap = angleShape as Record<string, z.ZodTypeAny>;
@@ -70,25 +70,20 @@ describe('Analysis 스키마 정합성(zod ↔ JSON Schema 드리프트 잠금)'
     );
   });
 
-  it('key enum이 zod enum / USAGE_ANGLES와 단일소스로 일치한다', () => {
-    const canonical = USAGE_ANGLES.map((a) => a.key);
-    expect([...jsonAngleItems.properties.key.enum]).toEqual(canonical);
-    expect(enumOptions).toEqual(canonical);
+  it('label은 enum 제약 없는 자유 문자열이다(ADR-0019 동적 관점)', () => {
+    // 와이어 스키마: label에 enum이 없어야 한다(고정 후보 강제 제거).
+    expect('enum' in jsonAngleItems.properties.label).toBe(false);
+    expect(jsonAngleItems.properties.label.type).toBe('string');
+    // zod: 임의의 라벨 문자열을 허용한다.
+    for (const label of ['AI·데이터센터', '수출 규제 리스크', '무엇이든', '投資']) {
+      expect(() =>
+        AnalysisSchema.parse({ summary: 's', angles: [{ label, hook: 'h', report: 'r', sourceRefs: [] }] }),
+      ).not.toThrow();
+    }
   });
 
   it('additionalProperties=false가 양 레벨에 있다(엄격 출력)', () => {
     expect(ANALYSIS_JSON_SCHEMA.additionalProperties).toBe(false);
     expect(jsonAngleItems.additionalProperties).toBe(false);
-  });
-
-  it('zod가 enum 키만 허용한다(JSON Schema enum과 동일 집합 강제)', () => {
-    for (const key of enumOptions) {
-      expect(() =>
-        AnalysisSchema.parse({ summary: 's', angles: [{ key, hook: 'h', report: 'r', sourceRefs: [] }] }),
-      ).not.toThrow();
-    }
-    expect(() =>
-      AnalysisSchema.parse({ summary: 's', angles: [{ key: '__nope__', hook: 'h', report: 'r', sourceRefs: [] }] }),
-    ).toThrow();
   });
 });

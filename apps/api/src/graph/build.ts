@@ -106,7 +106,7 @@ function buildUsageGraph(
       ? round2(mean(cited.map((id) => sourceById.get(id)!.confidence)))
       : 0.55;
     return {
-      id: `usage-${angle.key}`,
+      id: `usage-${i}`,
       label: angle.label,
       kind: 'usage',
       summary: angle.hook,
