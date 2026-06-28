@@ -110,13 +110,18 @@ describe('createSearchOrchestrator (리포트 2단 캐시)', () => {
   }
 
   // .env에 실제 키가 있어도 테스트는 항상 mock 클라이언트만 사용한다(네트워크 호출 0).
+  // PERSONAL_USE_MODE도 OFF로 고정 — 로컬 .env가 ON이어도 ADR-0014 Layer 게이트 단언이 성립하도록(ADR-0018).
   let originalKey: string | undefined;
+  let originalMode: boolean;
   beforeEach(() => {
     originalKey = env.ANTHROPIC_API_KEY;
     env.ANTHROPIC_API_KEY = 'test-key';
+    originalMode = env.PERSONAL_USE_MODE;
+    env.PERSONAL_USE_MODE = false;
   });
   afterEach(() => {
     env.ANTHROPIC_API_KEY = originalKey;
+    env.PERSONAL_USE_MODE = originalMode;
   });
 
   it('리포트 캐시 미스 시 LLM을 1회 호출하고 결과를 캐시에 저장한다', async () => {

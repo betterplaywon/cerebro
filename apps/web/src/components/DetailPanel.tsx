@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { NODE_KIND_LABELS, type GraphNode, type GraphSnapshot } from '@cerebro/shared';
 import { NODE_COLORS, NODE_USAGE_HINTS } from '../lib/colors';
 import { SOURCE_TYPE_LABELS } from '../lib/sources';
+import { reportParagraphs } from '../lib/report-format';
 import { CategoryIcon } from './CategoryIcon';
 
 interface DetailPanelProps {
@@ -79,12 +80,4 @@ export function DetailPanel({ node, graph, onClose }: DetailPanelProps) {
       </section>
     </aside>
   );
-}
-
-/** 리포트 본문을 문단 배열로 분해(줄바꿈 기준, 빈 줄 제거). */
-function reportParagraphs(report: string): string[] {
-  return report
-    .split(/\n+/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0);
 }
