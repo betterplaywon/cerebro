@@ -1,5 +1,6 @@
 import {
   GRAPH_LIMITS,
+  NODE_KIND_LABELS,
   type GraphEdge,
   type GraphNode,
   type GraphSnapshot,
@@ -15,15 +16,6 @@ import type { UsageReport } from '../analyze/report.js';
 /** 색이 입혀지는 카테고리 가지(중심·concept·attribute 제외). emit 순서 = 표시 우선순위. */
 const CATEGORY_KINDS = ['product', 'news', 'reputation', 'channel', 'person'] as const;
 type CategoryKind = (typeof CATEGORY_KINDS)[number];
-
-/** 카테고리 한국어 라벨(web NODE_KIND_LABELS와 정합; 3번째 중복 시 shared로 승격). */
-const CATEGORY_LABELS: Record<CategoryKind, string> = {
-  product: '제품·서비스',
-  news: '뉴스·이슈',
-  reputation: '평판·리뷰',
-  channel: '채널·플랫폼',
-  person: '인물',
-};
 
 /** 가독성 예산: 중심 외 가지(카테고리+concept) 총합 상한. */
 const MAX_BRANCHES = 10;
@@ -183,9 +175,9 @@ function buildCategoryNodes(
       .slice(0, MAX_REPRESENTATIVES);
     nodes.push({
       id: `cat-${kind}`,
-      label: CATEGORY_LABELS[kind],
+      label: NODE_KIND_LABELS[kind],
       kind,
-      summary: `'${query}' 관련 ${CATEGORY_LABELS[kind]}`,
+      summary: `'${query}' 관련 ${NODE_KIND_LABELS[kind]}`,
       importance: round2(clamp(0.5 + 0.4 * (members.length / total), 0.5, 0.9)),
       confidence: round2(mean(members.map((m) => m.source.confidence))),
       sourceIds: reps.map((r) => r.source.id),

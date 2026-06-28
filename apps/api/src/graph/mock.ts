@@ -1,4 +1,11 @@
-import type { GraphSnapshot, GraphNode, GraphEdge, Source, SubjectType } from '@cerebro/shared';
+import {
+  NODE_KIND_LABELS,
+  type GraphSnapshot,
+  type GraphNode,
+  type GraphEdge,
+  type Source,
+  type SubjectType,
+} from '@cerebro/shared';
 
 /**
  * MVP 스텁: 실제 수집(SourceAdapter) 전까지 프론트 개발/검증을 위한 결정적 목업 그래프.
@@ -34,10 +41,11 @@ export function buildMockGraph(query: string, type: SubjectType = 'unknown'): Gr
   };
 
   const branches: GraphNode[] = [
-    { id: 'n-product', label: '제품·서비스', kind: 'product', importance: 0.8, confidence: 0.7, sourceIds: ['s-store'], summary: '대표 제품/서비스' },
-    { id: 'n-news', label: '뉴스·이슈', kind: 'news', importance: 0.75, confidence: 0.65, sourceIds: ['s-naver'], summary: '최근 언급/이슈' },
-    { id: 'n-reputation', label: '평판·리뷰', kind: 'reputation', importance: 0.7, confidence: 0.55, sourceIds: ['s-blog'], summary: '사용자 평판' },
-    { id: 'n-channel', label: '채널·플랫폼', kind: 'channel', importance: 0.65, confidence: 0.6, sourceIds: ['s-store'], summary: '공식 채널/플랫폼' },
+    { id: 'n-product', label: NODE_KIND_LABELS.product, kind: 'product', importance: 0.8, confidence: 0.7, sourceIds: ['s-store'], summary: '대표 제품/서비스' },
+    { id: 'n-news', label: NODE_KIND_LABELS.news, kind: 'news', importance: 0.75, confidence: 0.65, sourceIds: ['s-naver'], summary: '최근 언급/이슈' },
+    { id: 'n-reputation', label: NODE_KIND_LABELS.reputation, kind: 'reputation', importance: 0.7, confidence: 0.55, sourceIds: ['s-blog'], summary: '사용자 평판' },
+    { id: 'n-channel', label: NODE_KIND_LABELS.channel, kind: 'channel', importance: 0.65, confidence: 0.6, sourceIds: ['s-store'], summary: '공식 채널/플랫폼' },
+    // concept 노드는 정식 라벨('관련 개념')이 아닌 목업 전용 표시명을 의도적으로 유지(폴백 그래프 표시 텍스트 보존).
     { id: 'n-concept', label: '관련 키워드', kind: 'concept', importance: 0.6, confidence: 0.5, sourceIds: [], summary: '연관 개념' },
   ];
 

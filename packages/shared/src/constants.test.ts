@@ -1,0 +1,28 @@
+import { describe, expect, it } from 'vitest';
+import { NODE_KINDS, NODE_KIND_LABELS } from './index.js';
+
+/**
+ * NODE_KIND_LABELS 는 FE(범례·상세패널)와 BE(그래프/폴백 노드 label)가 공유하는
+ * 사용자 노출 라벨 SSOT다. 한쪽만 바뀌어 패키지 경계에서 표류하면 이 테스트가 깨진다.
+ */
+describe('NODE_KIND_LABELS', () => {
+  it('모든 NodeKind에 한국어 라벨이 빠짐없이 정의된다', () => {
+    for (const kind of NODE_KINDS) {
+      expect(NODE_KIND_LABELS[kind]?.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('사용자 노출 라벨 텍스트를 고정한다', () => {
+    expect(NODE_KIND_LABELS).toEqual({
+      center: '중심',
+      product: '제품·서비스',
+      news: '뉴스·이슈',
+      person: '인물',
+      channel: '채널·플랫폼',
+      reputation: '평판·리뷰',
+      concept: '관련 개념',
+      attribute: '속성',
+      usage: '활용 관점',
+    });
+  });
+});

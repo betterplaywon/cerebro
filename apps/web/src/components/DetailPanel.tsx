@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
-import type { GraphNode, GraphSnapshot } from '@cerebro/shared';
-import { NODE_COLORS, NODE_KIND_LABELS, NODE_USAGE_HINTS } from '../lib/colors';
+import { NODE_KIND_LABELS, type GraphNode, type GraphSnapshot } from '@cerebro/shared';
+import { NODE_COLORS, NODE_USAGE_HINTS } from '../lib/colors';
 import { SOURCE_TYPE_LABELS } from '../lib/sources';
 import { CategoryIcon } from './CategoryIcon';
 
