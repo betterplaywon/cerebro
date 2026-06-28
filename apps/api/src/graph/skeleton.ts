@@ -21,7 +21,7 @@ export function buildSubject(
   return { id: SUBJECT_ID, query, type: subjectType ?? 'unknown', displayName: query };
 }
 
-export interface CenterNodeInput {
+interface CenterNodeInput {
   query: string;
   /** 중심 노드 한 줄 요약. */
   summary: string;
