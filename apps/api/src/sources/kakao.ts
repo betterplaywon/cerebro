@@ -42,8 +42,9 @@ export interface KakaoDeps {
  * web/blog/cafe 3종을 collectFromEndpoints로 병렬 수집한다(SSRF-safe fetch + rate limit). ADR-0016.
  */
 export function createKakaoAdapter(deps: KakaoDeps = {}): SourceAdapter {
-  // 카카오 검색 쿼터 보호 — 최소 호출 간격 120ms.
-  const limiter = createRateLimiter(120);
+  // 카카오 검색 쿼터 보호 — 지속 평균 간격 120ms.
+  // burst=엔드포인트 수: 한 검색의 3개 호출은 동시 발사(인트라-검색 스태거 제거), 지속 상한은 유지(ADR-0017).
+  const limiter = createRateLimiter(120, SEARCH_ENDPOINTS.length);
 
   return {
     id: 'kakao',

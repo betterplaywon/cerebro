@@ -48,8 +48,9 @@ export interface NaverDeps {
  * 멀티엔드포인트 수집 골격은 collectFromEndpoints 공유(ADR-0016).
  */
 export function createNaverAdapter(deps: NaverDeps = {}): SourceAdapter {
-  // 네이버 쿼터(25k/일·전 엔드포인트 공유) 보호 — 최소 호출 간격 120ms.
-  const limiter = createRateLimiter(120);
+  // 네이버 쿼터(25k/일·전 엔드포인트 공유) 보호 — 지속 평균 간격 120ms.
+  // burst=엔드포인트 수: 한 검색의 5개 호출은 동시 발사(인트라-검색 스태거 제거), 지속 상한은 유지(ADR-0017).
+  const limiter = createRateLimiter(120, SEARCH_ENDPOINTS.length);
 
   return {
     id: 'naver',
