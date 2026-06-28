@@ -7,8 +7,6 @@
   --accent-2: #6ea8ff;
   --border: #1b2540;
   --danger: #f6739b;
-  --silhouette-a: #454c61;
-  --silhouette-b: #232a3d;
 }
 
 * {
@@ -214,53 +212,6 @@ body {
   background: var(--accent);
   box-shadow: 0 0 24px 6px rgba(124, 246, 255, 0.7);
   animation: corePulse 1.8s ease-in-out infinite;
-}
-
-.silhouette {
-  position: absolute;
-  top: calc(8% + var(--i) * 6.1%);
-  left: -8%;
-  width: 8px;
-  height: 22px;
-  border-radius: 5px 5px 2px 2px;
-  background: linear-gradient(var(--silhouette-a), var(--silhouette-b));
-  opacity: 0;
-  animation: passby 3.4s linear infinite;
-  animation-delay: calc(var(--i) * -0.24s);
-}
-
-.silhouette::before {
-  content: '';
-  position: absolute;
-  top: -9px;
-  left: 50%;
-  width: 7px;
-  height: 7px;
-  margin-left: -3.5px;
-  border-radius: 50%;
-  background: var(--silhouette-a);
-}
-
-@keyframes passby {
-  0% {
-    left: -8%;
-    opacity: 0;
-    transform: scale(0.7);
-  }
-  15% {
-    opacity: 0.55;
-  }
-  50% {
-    transform: scale(1);
-  }
-  85% {
-    opacity: 0.55;
-  }
-  100% {
-    left: 108%;
-    opacity: 0;
-    transform: scale(0.7);
-  }
 }
 
 @keyframes corePulse {
@@ -628,15 +579,10 @@ body {
 
 /* ───────── 접근성: 모션 민감 사용자 ───────── */
 @media (prefers-reduced-motion: reduce) {
-  .silhouette,
   .cerebro-core,
   .cerebro-scene__canvas,
   .cerebro-loader__label {
     animation: none;
-  }
-  .silhouette {
-    opacity: 0.4;
-    left: calc(10% + var(--i) * 5.5%);
   }
   .cerebro-loader__label {
     opacity: 0.85;
