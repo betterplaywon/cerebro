@@ -45,6 +45,17 @@ function mockClient(
   return { client, create };
 }
 
+/** 전달된 user 메시지를 포착하는 가짜 클라이언트(레이어 필터링 검증용). */
+function capturingClient(text: string) {
+  let userContent = '';
+  const create = vi.fn(async (params: { messages: Array<{ content: string }> }) => {
+    userContent = params.messages[0]?.content ?? '';
+    return { stop_reason: 'end_turn' as Anthropic.Message['stop_reason'], content: [{ type: 'text', text }] };
+  });
+  const client = { messages: { create } } as unknown as Pick<Anthropic, 'messages'>;
+  return { client, create, getUserContent: () => userContent };
+}
+
 // .env에 실제 키가 있어도 테스트는 항상 mock 클라이언트만 사용한다(네트워크 호출 0).
 let originalKey: string | undefined;
 beforeEach(() => {
@@ -144,17 +155,6 @@ describe('analyzeUsage — ADR-0014 Layer 게이트', () => {
     angles: [{ key: 'investment', hook: 'h', report: 'r', sourceRefs: [0] }],
   });
 
-  /** 전달된 user 메시지를 포착하는 가짜 클라이언트(레이어 필터링 검증용). */
-  function capturingClient(text: string) {
-    let userContent = '';
-    const create = vi.fn(async (params: { messages: Array<{ content: string }> }) => {
-      userContent = params.messages[0]?.content ?? '';
-      return { stop_reason: 'end_turn' as Anthropic.Message['stop_reason'], content: [{ type: 'text', text }] };
-    });
-    const client = { messages: { create } } as unknown as Pick<Anthropic, 'messages'>;
-    return { client, create, getUserContent: () => userContent };
-  }
-
   it('Layer A(네이버·카카오)만 있으면 LLM을 호출하지 않고 null 반환(지출 0)', async () => {
     const layerAOnly: NormalizedItem[] = [
       normalize({ title: '네이버 블로그 후기', url: 'https://blog.naver.com/u/9', snippet: '후기' }, 'blog', 'A', 'a1', NOW),
@@ -181,6 +181,52 @@ describe('analyzeUsage — ADR-0014 Layer 게이트', () => {
 
     // 인용(sourceIds)도 Layer B만: 필터 후 top=[b1] → sourceRefs[0] → 'b1'
     expect(result!.angles[0]?.sourceIds).toEqual(['b1']);
+  });
+});
+
+// ── ADR-0018 개인 전용 모드: PERSONAL_USE_MODE=true면 Layer A도 LLM 입력·인용에 포함 ──
+describe('analyzeUsage — ADR-0018 개인 전용 모드', () => {
+  const VALID = JSON.stringify({
+    summary: '요약',
+    angles: [{ key: 'investment', hook: 'h', report: 'r', sourceRefs: [0, 1] }],
+  });
+
+  // 이 블록만 개인 전용 모드 ON(기본 OFF는 위 ADR-0014 게이트 테스트가 커버). 종료 시 원복.
+  let originalMode: boolean;
+  beforeEach(() => {
+    originalMode = env.PERSONAL_USE_MODE;
+    env.PERSONAL_USE_MODE = true;
+  });
+  afterEach(() => {
+    env.PERSONAL_USE_MODE = originalMode;
+  });
+
+  it('Layer A만 있어도 LLM을 호출하고 Layer A를 입력·인용에 포함한다', async () => {
+    const layerAOnly: NormalizedItem[] = [
+      normalize({ title: '네이버 블로그 후기', url: 'https://blog.naver.com/u/9', snippet: 'A레이어 스니펫' }, 'blog', 'A', 'a1', NOW),
+      normalize({ title: '카카오 웹문서', url: 'https://example.com/k', snippet: '문서' }, 'web', 'A', 'a2', NOW),
+    ];
+    const { client, create, getUserContent } = capturingClient(VALID);
+    const result = await analyzeUsage('토스', layerAOnly, { client });
+
+    expect(create).toHaveBeenCalledOnce();
+    expect(getUserContent()).toContain('네이버 블로그 후기'); // 개인 모드: Layer A 전송
+    // 인용도 Layer A 포함(순서는 confidence 정렬에 좌우되므로 집합으로 비교)
+    expect([...result!.angles[0]!.sourceIds].sort()).toEqual(['a1', 'a2']);
+  });
+
+  it('Layer A/B 혼합 시 둘 다 입력·인용에 포함한다(처음처럼)', async () => {
+    const mixed: NormalizedItem[] = [
+      normalize({ title: '네이버 블로그 후기', url: 'https://blog.naver.com/u/9', snippet: 'A레이어 스니펫' }, 'blog', 'A', 'a1', NOW),
+      normalize({ title: '위키 항목 본문', url: 'https://ko.wikipedia.org/wiki/X', snippet: 'B레이어 스니펫' }, 'wikipedia', 'B', 'b1', NOW),
+    ];
+    const { client, getUserContent } = capturingClient(VALID);
+    const result = await analyzeUsage('토스', mixed, { client });
+
+    const userContent = getUserContent();
+    expect(userContent).toContain('네이버 블로그 후기'); // Layer A도 전송
+    expect(userContent).toContain('위키 항목 본문'); // Layer B도 전송
+    expect([...result!.angles[0]!.sourceIds].sort()).toEqual(['a1', 'b1']); // 인용에 A·B 모두
   });
 });
 

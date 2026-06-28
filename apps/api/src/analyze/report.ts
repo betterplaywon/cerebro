@@ -145,7 +145,11 @@ export async function analyzeUsage(
   // ADR-0014 컴플라이언스 게이트: LLM 재가공·7일 리포트 캐시·인용(sourceIds)은 Layer B(상업 OK 소스)만.
   // 네이버·카카오(Layer A)는 표시·30분 캐시 전용 — Claude로 보내거나 파생 리포트를 장기 저장하지 않는다.
   // 이 한 줄이 LLM 입력(sourceLines)·인용·리포트 캐시를 모두 Layer B로 정합시킨다(단일 게이트).
-  const analyzable = items.filter((it) => it.layer === 'B');
+  //
+  // 예외 — 개인 전용 모드(ADR-0018): 운영자 본인만 쓰는 비공개·비영리 인스턴스에선 Layer A도 포함해
+  // '처음처럼' 한국어/시의성 깊이를 복원한다. 기본 OFF(공개 안전). 게이트는 여전히 이 한 줄이라
+  // 입력·인용·캐시가 함께 정합된다(개인 모드에선 A+B, 공개 모드에선 B만).
+  const analyzable = env.PERSONAL_USE_MODE ? items : items.filter((it) => it.layer === 'B');
   if (analyzable.length === 0) return null; // 분석 가능한 소스가 없으면 휴리스틱 그래프로 폴백(지출 0).
 
   // 예산 소진(서킷 오픈) 시 호출하지 않고 폴백(지출 0) — '키 없음'과 동일한 null 폴백 경로.

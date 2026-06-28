@@ -39,6 +39,14 @@ export const EnvSchema = z.object({
    * 영속 캐시/안정 인스턴스에서만 ON 권장.
    */
   PREWARM_ON_START: booleanFlag.default(false),
+  /**
+   * 개인 전용 모드(ADR-0018). 기본 OFF — 공개/다중사용자/수익화 인스턴스의 안전 기본값.
+   * ON이면 Layer A(네이버·카카오) 검색결과도 LLM 활용 리포트 입력·인용·캐시에 포함한다
+   * (LAYER-SPLIT 게이트 완화, '처음처럼' 한국어/시의성 깊이 복원).
+   * ⚠️ 운영자 본인만 쓰는 **비공개·비영리** 인스턴스에서만 ON 할 것 — 네이버·카카오 오픈API 약관은
+   *    검색결과의 재가공·장기저장을 금지한다(ADR-0014). 공개 배포·타인 제공·수익화 시 반드시 OFF.
+   */
+  PERSONAL_USE_MODE: booleanFlag.default(false),
   // 키 필요 소스(미설정 시 해당 어댑터 자동 비활성). 값은 .env에서만 주입.
   NAVER_CLIENT_ID: optionalSecret,
   NAVER_CLIENT_SECRET: optionalSecret,
