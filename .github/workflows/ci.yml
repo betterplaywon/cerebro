@@ -13,6 +13,9 @@ concurrency:
 
 permissions:
   contents: read
+  # gitleaks-action(v3)가 pull_request 이벤트에서 PR 커밋 목록(GET /pulls/{n}/commits)을
+  # 열거하려면 필요. 없으면 403 'Resource not accessible by integration'으로 스캔 전 크래시.
+  pull-requests: read
 
 jobs:
   quality:
