@@ -20,19 +20,6 @@ export const NODE_COLORS: Record<NodeKind, string> = {
   usage: '#FF9F5A',
 };
 
-/** 노드 유형의 한국어 라벨 */
-export const NODE_KIND_LABELS: Record<NodeKind, string> = {
-  center: '중심',
-  product: '제품·서비스',
-  news: '뉴스·이슈',
-  person: '인물',
-  channel: '채널·플랫폼',
-  reputation: '평판·리뷰',
-  concept: '관련 개념',
-  attribute: '속성',
-  usage: '활용 관점',
-};
-
 /** 노드 유형별 "정보 활용 방법" 안내 */
 export const NODE_USAGE_HINTS: Record<NodeKind, string> = {
   center: '검색 주제의 핵심입니다. 가지를 펼쳐 관련 정보를 탐색하세요.',

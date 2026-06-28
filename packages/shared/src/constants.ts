@@ -19,6 +19,22 @@ export const NODE_KINDS = [
   'usage', // 정보 활용 관점(투자/취업/경제…) — LLM 분석 리포트 노드
 ] as const;
 
+/**
+ * 노드 유형의 한국어 표시 라벨 (FE 범례·상세패널 + BE 그래프/폴백 노드 label 공용 SSOT).
+ * NODE_KINDS 와 키가 1:1 — 새 종류 추가 시 여기도 채워야 타입이 통과한다.
+ */
+export const NODE_KIND_LABELS: Record<(typeof NODE_KINDS)[number], string> = {
+  center: '중심',
+  product: '제품·서비스',
+  news: '뉴스·이슈',
+  person: '인물',
+  channel: '채널·플랫폼',
+  reputation: '평판·리뷰',
+  concept: '관련 개념',
+  attribute: '속성',
+  usage: '활용 관점',
+};
+
 /** 정보 출처의 유형 */
 export const SOURCE_TYPES = [
   'naver',
@@ -37,6 +53,5 @@ export const SOURCE_TYPES = [
 /** 그래프 제약 (성능 예산 — 모바일 폴백 시 더 낮게) */
 export const GRAPH_LIMITS = {
   MAX_NODES: 200,
-  MAX_EDGES: 400,
   MAX_QUERY_LENGTH: 80,
 } as const;

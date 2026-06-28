@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NODE_KINDS } from '@cerebro/shared';
-import { NODE_COLORS, NODE_KIND_LABELS, NODE_USAGE_HINTS } from './colors';
+import { NODE_COLORS, NODE_USAGE_HINTS } from './colors';
 
 /**
  * 팔레트 패리티: NODE_COLORS는 DESIGN-SYSTEM §1.4 SSOT와 정확히 일치해야 한다(2D/3D 단일 출처).
@@ -21,10 +21,9 @@ describe('NODE_COLORS = DESIGN-SYSTEM §1.4 SSOT', () => {
     });
   });
 
-  it('모든 NodeKind에 색·라벨·활용안내가 빠짐없이 정의된다', () => {
+  it('모든 NodeKind에 색·활용안내가 빠짐없이 정의된다', () => {
     for (const kind of NODE_KINDS) {
       expect(NODE_COLORS[kind]).toMatch(/^#[0-9A-F]{6}$/);
-      expect(NODE_KIND_LABELS[kind]?.length).toBeGreaterThan(0);
       expect(NODE_USAGE_HINTS[kind]?.length).toBeGreaterThan(0);
     }
   });

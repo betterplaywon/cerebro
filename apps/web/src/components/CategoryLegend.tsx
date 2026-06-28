@@ -1,5 +1,5 @@
-import { NODE_KINDS, type GraphSnapshot } from '@cerebro/shared';
-import { NODE_COLORS, NODE_KIND_LABELS } from '../lib/colors';
+import { NODE_KINDS, NODE_KIND_LABELS, type GraphSnapshot } from '@cerebro/shared';
+import { NODE_COLORS } from '../lib/colors';
 import { CategoryIcon } from './CategoryIcon';
 
 /**

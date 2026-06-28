@@ -106,7 +106,6 @@ export type SubjectType = z.infer<typeof SubjectTypeSchema>;
 export type NodeKind = z.infer<typeof NodeKindSchema>;
 export type SourceType = z.infer<typeof SourceTypeSchema>;
 export type Source = z.infer<typeof SourceSchema>;
-export type Subject = z.infer<typeof SubjectSchema>;
 export type GraphNode = z.infer<typeof GraphNodeSchema>;
 export type GraphEdge = z.infer<typeof GraphEdgeSchema>;
 export type GraphSnapshot = z.infer<typeof GraphSnapshotSchema>;
