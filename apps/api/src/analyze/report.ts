@@ -59,8 +59,15 @@ export interface UsageReport {
   angles: UsageAngle[];
 }
 
-/** Claude 구조화 출력 스키마(런타임 검증). 출력 텍스트(JSON)를 이 스키마로 파싱한다. */
-const AnalysisSchema = z.object({
+/**
+ * Claude 구조화 출력 스키마(런타임 검증). 출력 텍스트(JSON)를 이 스키마로 파싱한다.
+ *
+ * 짝꿍 `ANALYSIS_JSON_SCHEMA`(아래)와 형태가 일치해야 한다 — 한쪽만 바꾸면 API가 강제하는 형태와
+ * 파서가 기대하는 형태가 어긋나 조용히 폴백된다. `report.schema.test.ts`가 둘의 정합성을 잠근다.
+ * (SDK의 zodOutputFormat은 enum을 description으로 강등시켜 생성단계 enum 강제가 약해지므로,
+ *  하드 enum 와이어 스키마를 유지하기 위해 손으로 쓴 JSON Schema를 둔다 — 단일화 대신 드리프트 잠금.)
+ */
+export const AnalysisSchema = z.object({
   summary: z.string(),
   angles: z.array(
     z.object({
@@ -72,8 +79,8 @@ const AnalysisSchema = z.object({
   ),
 });
 
-/** 위 zod 스키마에 대응하는 JSON Schema(Claude output_config.format에 전달). */
-const ANALYSIS_JSON_SCHEMA = {
+/** 위 zod 스키마에 대응하는 JSON Schema(Claude output_config.format에 전달). 정합성은 report.schema.test.ts가 잠근다. */
+export const ANALYSIS_JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   required: ['summary', 'angles'],

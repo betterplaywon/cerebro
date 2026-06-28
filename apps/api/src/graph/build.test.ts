@@ -6,6 +6,9 @@ import type { UsageReport } from '../analyze/report.js';
 
 const NOW = '2026-06-25T00:00:00.000Z';
 
+/** 그래프 빌더가 엣지 weight에 쓰는 라운딩(build.ts round2와 동일) — 골격 헬퍼 추출 시 동등성 잠금. */
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
 describe('buildGraphFromCollection', () => {
   it('중심+토픽으로 유효한 그래프를 만든다', () => {
     const items = [
@@ -17,6 +20,12 @@ describe('buildGraphFromCollection', () => {
     expect(graph.nodes.find((n) => n.kind === 'center')?.label).toBe('토스');
     expect(graph.nodes.length).toBeGreaterThan(1);
     expect(graph.edges.every((e) => e.source === 'center')).toBe(true);
+
+    // 중심→가지 엣지 weight = 대상 노드 importance의 round2 (centerEdges 헬퍼 추출 전 잠금).
+    const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+    for (const e of graph.edges) {
+      expect(e.weight).toBe(round2(byId.get(e.target)!.importance));
+    }
   });
 
   it('검색어 토큰은 토픽에서 제외한다(중심 중복 방지)', () => {
@@ -98,6 +107,12 @@ describe('buildGraphFromCollection — LLM 활용 관점 그래프 (ADR-0008)', 
     expect(usage.find((n) => n.id === 'usage-investment')?.report).toBe('투자 유치는 성장 신호.');
     expect(usage.find((n) => n.id === 'usage-investment')?.sourceIds).toEqual(['s1']);
     expect(graph.edges.every((e) => e.source === 'center' && e.relation === '활용')).toBe(true);
+
+    // 활용 그래프도 중심→가지 weight = 대상 importance round2 (centerEdges 헬퍼 추출 전 잠금).
+    const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+    for (const e of graph.edges) {
+      expect(e.weight).toBe(round2(byId.get(e.target)!.importance));
+    }
   });
 
   it('활용 관점이 비면 휴리스틱(카테고리/토픽) 그래프로 폴백한다', () => {
