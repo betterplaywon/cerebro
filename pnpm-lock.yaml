@@ -97,6 +97,9 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
+      '@react-three/test-renderer':
+        specifier: ^8.2.4
+        version: 8.2.4(@react-three/fiber@8.18.0(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.169.0))(react@18.3.1)(three@0.169.0)
       '@testing-library/jest-dom':
         specifier: ^6.6.3
         version: 6.9.1
@@ -953,6 +956,13 @@ packages:
       '@react-three/fiber': ^8.0
       react: ^18.0
       three: '>= 0.138.0'
+
+  '@react-three/test-renderer@8.2.4':
+    resolution: {integrity: sha512-igZWeGSkrz4HWxx5Dk3jSeCHRVUzvRn/fENlnDDpQGtJyEQyeGPGv8oRK8YdtMzc1VxAmlV5I5vVOKpixghObg==}
+    peerDependencies:
+      '@react-three/fiber': '>=8 < 9'
+      react: '>=18 <19'
+      three: '>=0.133'
 
   '@rolldown/pluginutils@1.0.0-beta.27':
     resolution: {integrity: sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==}
@@ -3378,6 +3388,12 @@ snapshots:
       three-stdlib: 2.36.1(three@0.169.0)
     transitivePeerDependencies:
       - '@types/three'
+
+  '@react-three/test-renderer@8.2.4(@react-three/fiber@8.18.0(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.169.0))(react@18.3.1)(three@0.169.0)':
+    dependencies:
+      '@react-three/fiber': 8.18.0(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.169.0)
+      react: 18.3.1
+      three: 0.169.0
 
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
