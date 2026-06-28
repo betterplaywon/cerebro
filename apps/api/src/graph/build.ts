@@ -10,7 +10,7 @@ import {
 import { tokenize, type NormalizedItem } from '../collect/normalize.js';
 import { extractTopics } from '../collect/score.js';
 import { classifySource } from './category-rules.js';
-import { buildCenterNode, buildSubject, centerEdges } from './skeleton.js';
+import { buildCenterNode, buildSubject, centerEdges, round2 } from './skeleton.js';
 import type { UsageReport } from '../analyze/report.js';
 
 /** 색이 입혀지는 카테고리 가지(중심·concept·attribute 제외). emit 순서 = 표시 우선순위. */
@@ -199,8 +199,4 @@ function mean(values: number[]): number {
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }
