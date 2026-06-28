@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, type CanvasTexture, type Sprite, type SpriteMaterial } from 'three';
-import { SCENE, timelineAt, type CrowdLayout } from '../../lib/cerebro-timeline';
+import { SCENE, timelineAt, writeFocusPosition, type CrowdLayout } from '../../lib/cerebro-timeline';
 import { makeGlowTexture } from './crowd-shader';
 
 /**
@@ -32,12 +32,7 @@ export function SpotlightGlow({ layout }: { layout: CrowdLayout }) {
       return;
     }
     s.visible = true;
-    const i = tl.focusIndex * 3;
-    s.position.set(
-      layout.positions[i] ?? 0,
-      layout.positions[i + 1] ?? 0,
-      layout.positions[i + 2] ?? 0,
-    );
+    writeFocusPosition(layout.positions, tl.focusIndex, s.position);
     const sc = 6 + 2 * tl.spotStrength;
     s.scale.set(sc, sc, 1);
     m.opacity = tl.spotStrength * 0.8;

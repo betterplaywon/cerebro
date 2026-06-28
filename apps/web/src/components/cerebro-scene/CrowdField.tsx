@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { timelineAt, type CrowdLayout } from '../../lib/cerebro-timeline';
+import { timelineAt, writeFocusPosition, type CrowdLayout } from '../../lib/cerebro-timeline';
 import { buildCrowdResources, type CrowdResources } from './crowd-shader';
 
 /**
@@ -35,12 +35,7 @@ export function CrowdField({ layout }: { layout: CrowdLayout }) {
     u.uFlash.value = tl.flash;
     u.uSpotStrength.value = tl.spotStrength;
     u.uPixelRatio.value = gl.getPixelRatio(); // 리사이즈/HiDPI 변화 대응
-    const i = tl.focusIndex * 3;
-    u.uSpot.value.set(
-      layout.positions[i] ?? 0,
-      layout.positions[i + 1] ?? 0,
-      layout.positions[i + 2] ?? 0,
-    );
+    writeFocusPosition(layout.positions, tl.focusIndex, u.uSpot.value);
   });
 
   if (!res) return null;
