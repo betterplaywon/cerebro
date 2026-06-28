@@ -46,6 +46,7 @@
 **환경변수**(Settings → Environment Variables, 빌드 타임 인라인이므로 빌드 전 설정):
 - `VITE_API_BASE_URL` = A단계 Render API의 **오리진만**(예: `https://<RENDER-서비스명>.onrender.com` — 끝 슬래시·경로 없이. 클라이언트가 `/api/search`를 덧붙임) *(Production)*
 - *(Supabase 연동 시)* `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — **공개값임**(번들에 노출). anon 키만 허용.
+- `VITE_PUBLIC_SITE_URL` = web 사이트 **절대 URL**(끝 슬래시 없이, 예: `https://<도메인>`) — OG/트위터 카드·canonical의 절대 경로 생성에 빌드시 주입(ADR-0021). **미설정 시 Vercel 프로덕션 URL(`VERCEL_PROJECT_PRODUCTION_URL`)로 자동 폴백**하므로 보통 생략 가능. 커스텀 도메인을 쓰면 그 값으로 명시 권장.
 
 ## C. 연결 순서 (닭-달걀 해소)
 1. **A. Render(api) 먼저 배포** → API URL 확보.

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="cerebro — 정보의 마인드맵">
+  <!-- 정적 OG 카드(소스). public/og-cover.png 생성용 원본 — 수정 후 재래스터 절차는 ADR-0021 참조. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#070c1a" />
+      <stop offset="55%" stop-color="#04060f" />
+      <stop offset="100%" stop-color="#02030a" />
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2a6cb4" stop-opacity="0.45" />
+      <stop offset="70%" stop-color="#2a6cb4" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="node" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#d4fdff" />
+      <stop offset="55%" stop-color="#7cf6ff" />
+      <stop offset="100%" stop-color="#2bb5d6" />
+    </radialGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="9" result="b" />
+      <feMerge>
+        <feMergeNode in="b" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <ellipse cx="900" cy="315" rx="520" ry="430" fill="url(#halo)" />
+
+  <!-- 우측: 중심-가지 마인드맵 모티프 -->
+  <g transform="translate(900 315)" stroke="#7cf6ff" stroke-opacity="0.45" stroke-width="2.5" stroke-linecap="round">
+    <line x1="0" y1="0" x2="150" y2="-120" />
+    <line x1="0" y1="0" x2="190" y2="40" />
+    <line x1="0" y1="0" x2="120" y2="150" />
+    <line x1="0" y1="0" x2="-140" y2="-90" />
+    <line x1="0" y1="0" x2="-170" y2="70" />
+    <line x1="0" y1="0" x2="-60" y2="180" />
+  </g>
+  <g transform="translate(900 315)">
+    <g fill="#9fdcff" fill-opacity="0.92">
+      <circle cx="150" cy="-120" r="13" />
+      <circle cx="190" cy="40" r="13" />
+      <circle cx="120" cy="150" r="13" />
+      <circle cx="-140" cy="-90" r="13" />
+      <circle cx="-170" cy="70" r="13" />
+      <circle cx="-60" cy="180" r="13" />
+    </g>
+    <circle cx="0" cy="0" r="30" fill="url(#node)" filter="url(#soft)" />
+  </g>
+
+  <!-- 좌측: 워드마크 + 태그라인 -->
+  <text x="90" y="300" font-family="Helvetica, Arial, 'Apple SD Gothic Neo', sans-serif" font-size="118" font-weight="700" letter-spacing="4" fill="#7cf6ff">cerebro</text>
+  <text x="94" y="372" font-family="'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" font-size="40" font-weight="500" fill="#e7ecf5">정보의 마인드맵</text>
+  <text x="94" y="430" font-family="'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" font-size="27" font-weight="400" fill="#8a93a6">공개정보를 수집·정제해 3D로 연결합니다</text>
+</svg>
