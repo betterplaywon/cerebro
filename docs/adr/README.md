@@ -20,3 +20,6 @@
 | [0013](./0013-llm-budget-circuit-breaker.md) | LLM 예산 자동 상한(서킷 브레이커): 누적 추정비용 상한 도달 시 자동 폴백 | Accepted |
 | [0014](./0014-source-license-segmentation.md) | 소스 라이선스 분리: 무료 표시(네이버·카카오) vs 수익화·재가공(상업 OK 소스) | Accepted |
 | [0015](./0015-publicdata-corp-source.md) | 공공데이터포털(금융위 기업기본정보) Layer B 소스 도입 — 무료 LLM 리포트 깊이 보강 | Accepted |
+| [0016](./0016-multi-endpoint-adapter-helper.md) | 멀티엔드포인트 검색 어댑터 공유 헬퍼 추출 | Accepted |
+| [0017](./0017-ratelimiter-token-bucket-burst.md) | 레이트 리미터 캡-버스트 토큰 버킷 (인트라-검색 스태거 제거) | Accepted |
+| [0018](./0018-personal-use-mode.md) | 개인 전용 모드: 비공개·비영리 인스턴스에서 Layer A를 LLM 리포트에 재포함 | Accepted |
