@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Line, OrbitControls } from '@react-three/drei';
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
@@ -11,7 +11,8 @@ import { NodeView } from './mind-map/NodeView';
 interface MindMapCanvasProps {
   graph: GraphSnapshot;
   selectedId: string | null;
-  onSelect: (node: GraphNode) => void;
+  /** 노드 선택. `null`이면 선택 해제(빈 공간 클릭 → 상세 패널 닫힘). */
+  onSelect: (node: GraphNode | null) => void;
 }
 
 /** 캔버스 내부 씬 그래프(라이트·엣지·노드 3계층·카메라 리그·후처리).
@@ -100,12 +101,22 @@ export function MindMapScene({ graph, selectedId, onSelect }: MindMapCanvasProps
  *  antialias:false: EffectComposer가 멀티샘플 RT로 씬 AA를 담당하므로 컨텍스트 MSAA 백버퍼는
  *  이득 0의 이중 할당이다(자매 CerebroScene과 동일 설정). */
 export function MindMapCanvas(props: MindMapCanvasProps) {
+  // 빈 공간 클릭으로 선택 해제하되, 회전 드래그까지 해제로 오인하지 않도록 포인터 이동량을 가드한다.
+  const downPos = useRef<{ x: number; y: number } | null>(null);
   return (
     <Canvas
       frameloop="demand"
       camera={{ position: SCENE.camera.position, fov: SCENE.camera.fov }}
       dpr={SCENE.dpr}
       gl={{ alpha: true, antialias: false }}
+      onPointerDown={(e) => {
+        downPos.current = { x: e.clientX, y: e.clientY };
+      }}
+      onPointerMissed={(e) => {
+        const d = downPos.current;
+        const moved = d ? Math.hypot(e.clientX - d.x, e.clientY - d.y) : 0;
+        if (moved < 6) props.onSelect(null); // 순수 클릭(≈제자리)만 선택 해제 — 드래그-회전은 유지
+      }}
     >
       <MindMapScene {...props} />
     </Canvas>
