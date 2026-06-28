@@ -317,6 +317,17 @@ body {
   margin: 1.1rem 0 0.4rem;
 }
 
+.detail-panel__report p {
+  margin: 0 0 0.7rem;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--fg);
+}
+
+.detail-panel__report p:last-child {
+  margin-bottom: 0;
+}
+
 .detail-panel__sources {
   list-style: none;
   padding: 0;
