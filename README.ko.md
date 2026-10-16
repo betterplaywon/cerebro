@@ -29,7 +29,7 @@
 |---|---|---|
 | 위키백과 | ✅ 동작 | 키 불필요 (ko.wikipedia REST) |
 | 네이버 검색 | ✅ 동작 | webkr·news·blog·cafe·kin (단일 키, 일일 25k콜 공유) |
-| 카카오(다음) 검색 | ⏸️ 키 대기 | web·blog·cafe — 국내 커뮤니티 보완. `KAKAO_REST_API_KEY` 입력 시 자동 활성 (ADR-0007) |
+| 카카오(다음) 검색 | ✅ 동작 | web·blog·cafe — 국내 커뮤니티 보완. `KAKAO_REST_API_KEY` 입력 시 자동 활성 (ADR-0007) |
 | 광범위 웹검색 | ⏸️ 보류 | 구글=신규 영구차단·Brave=2026-02 무료폐지. 재도입 1순위 Tavily (ADR-0005) |
 | SNS (X·인스타·페북) | ⏸️ 보류 | 유료·법인심사·공개검색 API 부재 (ADR-0007) |
 
